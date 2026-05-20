@@ -26,3 +26,6 @@ env/
 
 # Logs
 *.log
+
+# User uploaded avatars
+static/avatars/
