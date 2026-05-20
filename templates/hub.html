@@ -4,13 +4,13 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-10">
-    <div class="flex items-center justify-between mb-10">
+    <div class="flex items-center gap-4 mb-10">
         <h1 class="text-2xl font-bold tracking-tight">{{ _('hub_heading') }}</h1>
-        <button onclick="openSearchModal()"
-                class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-800
-                       hover:bg-gray-700 transition-colors text-gray-400 hover:text-white">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/>
+        <button onclick="openSearchModal()" class="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full
+                       flex items-center justify-center shadow-lg transition-colors">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35" />
             </svg>
         </button>
     </div>
@@ -20,41 +20,39 @@
     </div>
 </div>
 
-<div id="invites-container"
-     class="fixed top-24 right-4 flex flex-col gap-2 z-40 w-72"></div>
+<div id="invites-container" class="fixed top-24 right-4 flex flex-col gap-2 z-40 w-72"></div>
 
-<div id="profile-modal"
-     class="hidden fixed inset-0 z-[60] bg-gray-950/90 backdrop-blur-sm px-4">
+<div id="profile-modal" class="hidden fixed inset-0 z-[60] bg-gray-950/90 backdrop-blur-sm px-4">
     <div class="min-h-full flex items-center justify-center">
         <div class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold text-white">{{ _('profile_title') }}</h2>
                 <button type="button" onclick="closeProfileModal()"
-                        class="text-gray-400 hover:text-white transition-colors">{{ _('btn_close') }}</button>
+                    class="text-gray-400 hover:text-white transition-colors">{{ _('btn_close') }}</button>
             </div>
 
             <form id="profile-form" class="space-y-4">
                 <!-- Avatar -->
                 <div class="flex flex-col items-center gap-3">
                     <div id="avatar-click-target" class="relative group cursor-pointer"
-                         onclick="document.getElementById('avatar-input').click()">
-                        <div id="avatar-preview"
-                             class="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center
+                        onclick="document.getElementById('avatar-input').click()">
+                        <div id="avatar-preview" class="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center
                                     text-3xl font-bold select-none overflow-hidden">
                             {% if user.avatar_url %}
-                                <img src="{{ user.avatar_url }}" alt="" class="w-full h-full object-cover">
+                            <img src="{{ user.avatar_url }}" alt="" class="w-full h-full object-cover">
                             {% else %}
-                                {{ user.username[0].upper() }}
+                            {{ user.username[0].upper() }}
                             {% endif %}
                         </div>
                         <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center
                                     opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0
                                          011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0
                                          01-2-2V9z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </div>
                     </div>
@@ -63,9 +61,10 @@
                 </div>
 
                 <div>
-                    <label for="profile-username" class="block text-sm text-gray-400 mb-2">{{ _('label_username') }}</label>
+                    <label for="profile-username" class="block text-sm text-gray-400 mb-2">{{ _('label_username')
+                        }}</label>
                     <input id="profile-username" type="text" maxlength="20"
-                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
+                        class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
                     <label for="profile-email" class="block text-sm text-gray-400 mb-2">
@@ -73,23 +72,24 @@
                         <span class="ml-1 text-xs text-gray-500 font-normal">{{ _('label_optional') }}</span>
                     </label>
                     <input id="profile-email" type="email"
-                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
+                        class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
-                    <label for="profile-password" class="block text-sm text-gray-400 mb-2">{{ _('label_new_password') }}</label>
+                    <label for="profile-password" class="block text-sm text-gray-400 mb-2">{{ _('label_new_password')
+                        }}</label>
                     <input id="profile-password" type="password" placeholder="{{ _('placeholder_keep_password') }}"
-                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-sky-500">
+                        class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-2">{{ _('profile_language') }}</label>
                     <div class="flex gap-2">
                         <button type="button" onclick="setProfileLang('en')" id="lang-btn-en"
-                                class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
+                            class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
                                        {% if lang == 'en' %}border-indigo-500 text-indigo-400 bg-indigo-950/40{% else %}border-gray-700 text-gray-400 hover:border-gray-500{% endif %}">
                             English
                         </button>
                         <button type="button" onclick="setProfileLang('pt-BR')" id="lang-btn-pt"
-                                class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
+                            class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
                                        {% if lang == 'pt-BR' %}border-indigo-500 text-indigo-400 bg-indigo-950/40{% else %}border-gray-700 text-gray-400 hover:border-gray-500{% endif %}">
                             Português
                         </button>
@@ -98,11 +98,11 @@
                 <p id="profile-feedback" class="min-h-5 text-sm text-gray-500"></p>
                 <div class="flex gap-3 pt-2">
                     <button type="submit"
-                            class="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500 transition-colors">
+                        class="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500 transition-colors">
                         {{ _('btn_save') }}
                     </button>
                     <button type="button" onclick="signOut()"
-                            class="flex-1 rounded-xl border border-red-700 px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-950/50 transition-colors">
+                        class="flex-1 rounded-xl border border-red-700 px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-950/50 transition-colors">
                         {{ _('btn_sign_out') }}
                     </button>
                 </div>
@@ -112,27 +112,26 @@
 </div>
 
 <!-- Search modal -->
-<div id="search-modal"
-     class="hidden fixed inset-0 z-[60] bg-gray-950/90 backdrop-blur-sm px-4">
+<div id="search-modal" class="hidden fixed inset-0 z-[60] bg-gray-950/90 backdrop-blur-sm px-4">
     <div class="min-h-full flex items-center justify-center">
-        <div class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
+        <div id="search-modal-card"
+            class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-white">{{ _('search_title') }}</h2>
                 <button type="button" onclick="closeSearchModal()"
-                        class="text-gray-400 hover:text-white transition-colors">{{ _('btn_close') }}</button>
+                    class="text-gray-400 hover:text-white transition-colors">{{ _('btn_close') }}</button>
             </div>
-            <input id="search-input" type="text" placeholder="{{ _('search_placeholder') }}"
-                   class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500
+            <input id="search-input" type="text" placeholder="{{ _('search_placeholder') }}" class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500
                           outline-none focus:ring-1 focus:ring-sky-500 mb-4">
             <div id="search-results" class="space-y-2 min-h-[4rem]"></div>
             <div id="search-pagination" class="hidden flex items-center justify-between mt-4">
                 <button id="search-prev" onclick="searchPage(-1)"
-                        class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors disabled:opacity-40">
+                    class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors disabled:opacity-40">
                     ←
                 </button>
                 <span id="search-page-label" class="text-xs text-gray-500"></span>
                 <button id="search-next" onclick="searchPage(1)"
-                        class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors disabled:opacity-40">
+                    class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm transition-colors disabled:opacity-40">
                     →
                 </button>
             </div>
@@ -167,12 +166,16 @@
 <script src="/static/js/hub.js"></script>
 <script>
     let searchCurrentPage = 1;
-    let searchTotalPages  = 1;
-    let searchQuery       = '';
-    let searchDebounce    = null;
+    let searchTotalPages = 1;
+    let searchQuery = '';
+    let searchDebounce = null;
 
     function openSearchModal() {
-        document.getElementById('search-modal').classList.remove('hidden');
+        const modal = document.getElementById('search-modal');
+        const card = document.getElementById('search-modal-card');
+        modal.classList.remove('hidden');
+        gsap.fromTo(modal, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: 'power2.out' });
+        gsap.fromTo(card, { opacity: 0, scale: 0.93, y: -12 }, { opacity: 1, scale: 1, y: 0, duration: 0.22, ease: 'back.out(1.5)' });
         document.getElementById('search-input').value = '';
         searchCurrentPage = 1;
         runSearch('', 1);
@@ -180,7 +183,13 @@
     }
 
     function closeSearchModal() {
-        document.getElementById('search-modal').classList.add('hidden');
+        const modal = document.getElementById('search-modal');
+        const card = document.getElementById('search-modal-card');
+        gsap.to(card, { opacity: 0, scale: 0.93, y: -10, duration: 0.16, ease: 'power2.in' });
+        gsap.to(modal, {
+            opacity: 0, duration: 0.18, ease: 'power2.in',
+            onComplete: () => modal.classList.add('hidden')
+        });
     }
 
     document.getElementById('search-modal').addEventListener('click', e => {
@@ -209,7 +218,7 @@
             const res = await fetch(`/players/search?q=${encodeURIComponent(q)}&page=${page}&limit=10`);
             const data = await res.json();
             searchCurrentPage = data.page;
-            searchTotalPages  = data.pages;
+            searchTotalPages = data.pages;
 
             if (!data.results.length) {
                 results.innerHTML = `<p class="text-center text-gray-600 text-sm py-4">${t('search_no_results')}</p>`;
@@ -231,7 +240,8 @@
             results.querySelectorAll('.search-player-row').forEach(row => {
                 row.addEventListener('click', () => {
                     closeSearchModal();
-                    openChatThread(row.dataset.userId, row.dataset.username);
+                    openDrawer();
+                    openThread(row.dataset.userId, row.dataset.username);
                 });
             });
 
