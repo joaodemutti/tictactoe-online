@@ -169,6 +169,7 @@ async def match_page(
         {
             "user": current_user,
             "match_id": str(match.id),
+            "match_status": match.status.value,
             "players": players,
             "lang": lang,
             "_": get_translator(lang),

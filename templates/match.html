@@ -162,8 +162,15 @@
     const CURRENT_USER_ID = {{ user.id | tojson }};
     const CURRENT_USERNAME = {{ user.username | tojson }};
     const MATCH_ID = {{ match_id | tojson }};
+    const MATCH_STATUS = {{ match_status | tojson }};
     const MATCH_PLAYERS = {{ players | tojson }};
     window.CHAT_CONTACTS = MATCH_PLAYERS.filter(p => p.user_id !== CURRENT_USER_ID);
+
+    if (MATCH_STATUS === 'finished') {
+        document.getElementById('waiting-status').remove();
+        const lbl = document.getElementById('match-status-label');
+        if (lbl) lbl.remove();
+    }
 </script>
 <script src="/static/js/match.js"></script>
 {% endblock %}

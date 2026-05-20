@@ -47,6 +47,13 @@ async def signup(
     email = email.strip() if email else None
     email = email or None
 
+    if len(username) > 20:
+        return templates.TemplateResponse(
+            request, "auth/signup.html",
+            _ctx(request, error=_("error_username_too_long")),
+            status_code=400,
+        )
+
     conditions = [User.username == username]
     if email:
         conditions.append(User.email == email)
@@ -163,6 +170,8 @@ async def update_profile(
 
     if not username:
         return JSONResponse({"error": _("error_username_required")}, status_code=400)
+    if len(username) > 20:
+        return JSONResponse({"error": _("error_username_too_long")}, status_code=400)
 
     conditions = [User.username == username]
     if email:

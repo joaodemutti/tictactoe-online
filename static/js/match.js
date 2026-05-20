@@ -43,7 +43,7 @@ let board       = Array(9).fill(null);   // "X" | "O" | null per cell
 let myRole      = null;                  // "x" | "o"
 let currentRoles = {};                   // user_id → "x" | "o"
 let currentTurn = null;                  // user_id whose turn it is
-let gameOver    = false;
+let gameOver    = typeof MATCH_STATUS !== "undefined" && MATCH_STATUS === "finished";
 let countdownInterval = null;
 let waitingOfflineTimer = null;
 let waitingOfflineCheckReady = false;

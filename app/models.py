@@ -31,7 +31,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(50), unique=True, nullable=False, index=True)
+    username = Column(String(20), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=True)
     password_hash = Column(String(255), nullable=False)
     language_code = Column(String(10), nullable=False, default="en")

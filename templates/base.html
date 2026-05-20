@@ -632,11 +632,13 @@
                 : '';
 
             el.innerHTML = `
-                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-800
-                            rounded-full border border-gray-700 text-xs select-none">
+                <a href="/match/${game.match_id}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-800
+                          rounded-full border border-gray-700 text-xs select-none
+                          hover:border-gray-500 transition-colors cursor-pointer">
                     <span class="font-semibold ${color}">${label}</span>
                     ${role}
-                </div>
+                </a>
             `;
 
             thread.appendChild(el);
