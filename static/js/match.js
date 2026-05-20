@@ -376,16 +376,29 @@ function onGameOver(data) {
     updateTurnIndicator();
 
     let message;
+    let winner = null;
     if (data.result === "win") {
-        const winner = MATCH_PLAYERS.find(p => p.user_id === data.winner_id);
+        winner = MATCH_PLAYERS.find(p => p.user_id === data.winner_id);
         message = winner ? t('match_winner', { name: winner.username }) : t('match_winner_fallback');
     } else {
         message = t('match_draw');
     }
 
-    const overlay = document.getElementById("gameover-overlay");
-    const text    = document.getElementById("gameover-text");
+    const overlay   = document.getElementById("gameover-overlay");
+    const text      = document.getElementById("gameover-text");
+    const avatarEl  = document.getElementById("gameover-avatar");
+
     text.textContent = message;
+
+    if (winner && avatarEl) {
+        const initial = winner.username.charAt(0).toUpperCase();
+        avatarEl.innerHTML = winner.avatar_url
+            ? `<img src="${winner.avatar_url}" alt="" class="w-full h-full object-cover">`
+            : `<div class="w-full h-full bg-indigo-600 flex items-center justify-center text-4xl font-bold">${initial}</div>`;
+        avatarEl.classList.remove("hidden");
+        gsap.fromTo(avatarEl, { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" });
+    }
+
     overlay.classList.remove("hidden");
 
     gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" });

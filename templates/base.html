@@ -227,23 +227,35 @@
         }
 
         function primeNotificationAudio() {
-            const ctx = ensureNotificationAudio();
-            if (!ctx) return;
-            const unlock = () => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                gain.gain.value = 0.0001;
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.01);
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            if (!notificationAudioCtx) notificationAudioCtx = new AudioCtx();
+            const ctx = notificationAudioCtx;
+            const playSilence = () => {
+                try {
+                    const buf = ctx.createBuffer(1, 1, 22050);
+                    const src = ctx.createBufferSource();
+                    src.buffer = buf;
+                    src.connect(ctx.destination);
+                    src.start(0);
+                } catch (_) {}
             };
             if (ctx.state === 'suspended') {
-                ctx.resume().then(unlock).catch(() => { });
-            } else {
-                unlock();
+                ctx.resume().then(playSilence).catch(() => {});
             }
+            playSilence();
         }
+
+        // Attach as early as possible — do not wait for DOMContentLoaded
+        (function attachAudioUnlock() {
+            const opts = { passive: true, capture: true };
+            document.addEventListener('touchstart', primeNotificationAudio, opts);
+            document.addEventListener('pointerdown', primeNotificationAudio, opts);
+            document.addEventListener('keydown', primeNotificationAudio, opts);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') primeNotificationAudio();
+            });
+        })();
 
         function playNotificationSound() {
             if (soundMuted) return;
@@ -879,12 +891,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             loadContacts();
-            document.addEventListener('touchstart', primeNotificationAudio, { passive: true });
-            document.addEventListener('pointerdown', primeNotificationAudio, { passive: true });
-            document.addEventListener('keydown', primeNotificationAudio, { passive: true });
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') primeNotificationAudio();
-            });
             document.getElementById('chat-input').addEventListener('keydown', e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
             });

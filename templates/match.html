@@ -150,6 +150,8 @@
 <!-- Game over overlay - shown on win or draw, auto-redirects to hub -->
 <div id="gameover-overlay" class="fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center
             justify-center z-40 hidden">
+    <div id="gameover-avatar"
+         class="hidden w-24 h-24 rounded-full overflow-hidden mb-5 ring-4 ring-white/20"></div>
     <p id="gameover-text" class="text-5xl font-bold text-white mb-4"></p>
     <p class="text-sm text-gray-500">{{ _('match_returning_hub') }}</p>
 </div>
