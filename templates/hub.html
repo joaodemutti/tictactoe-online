@@ -61,7 +61,10 @@
                            class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
-                    <label for="profile-email" class="block text-sm text-gray-400 mb-2">{{ _('label_email') }}</label>
+                    <label for="profile-email" class="block text-sm text-gray-400 mb-2">
+                        {{ _('label_email') }}
+                        <span class="ml-1 text-xs text-gray-500 font-normal">{{ _('label_optional') }}</span>
+                    </label>
                     <input id="profile-email" type="email"
                            class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>

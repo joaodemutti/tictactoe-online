@@ -35,8 +35,6 @@ function connectMatch() {
 connectMatch();
 
 // Seed avatar cache from match player list so the chat drawer can show photos
-const playerAvatars = {};
-const playerAvatarBust = {};
 MATCH_PLAYERS.forEach(p => { if (p.avatar_url) playerAvatars[p.user_id] = p.avatar_url; });
 
 // ── Game state ────────────────────────────────────────────────────────────────
@@ -158,6 +156,7 @@ function renderMark(index, mark, animate = true) {
                 "stroke-dasharray": len,
                 "stroke-dashoffset": animate ? len : 0,
             }).forEach(([k, v]) => line.setAttribute(k, v));
+            if (animate) gsap.set(line, { strokeDashoffset: len });
             svg.appendChild(line);
             if (animate) {
                 gsap.to(line, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out", delay: idx * 0.12 });
@@ -277,7 +276,7 @@ function startWaitingOfflineTimer() {
         if (typeof gsap !== "undefined" && !label.classList.contains("hidden")) {
             gsap.fromTo(label, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.25, ease: "power2.out" });
         }
-    }, 15000);
+    }, 3000);
 }
 
 function clearWaitingOfflineTimer() {
@@ -391,10 +390,7 @@ function onGameOver(data) {
     text.textContent = message;
 
     if (winner && avatarEl) {
-        const initial = winner.username.charAt(0).toUpperCase();
-        avatarEl.innerHTML = winner.avatar_url
-            ? `<img src="${winner.avatar_url}" alt="" class="w-full h-full object-cover">`
-            : `<div class="w-full h-full bg-indigo-600 flex items-center justify-center text-4xl font-bold">${initial}</div>`;
+        avatarEl.innerHTML = renderAvatar(winner.user_id, winner.username, { noWrapper: true, textSize: "text-4xl" });
         avatarEl.classList.remove("hidden");
         gsap.fromTo(avatarEl, { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" });
     }

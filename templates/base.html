@@ -21,6 +21,29 @@
             });
             location.reload();
         }
+
+        // ── Avatar cache (shared across hub.js / match.js) ────────────────────
+        const playerAvatars = {};
+        const playerAvatarBust = {};
+
+        // renderAvatar(userId, username, opts)
+        // opts: { size="w-10 h-10", textSize="text-lg", presenceDot=null, noWrapper=false }
+        // noWrapper=true → returns just the inner img/div (use when outer container is already sized)
+        function renderAvatar(userId, username, opts) {
+            const { size = "w-10 h-10", textSize = "text-lg", presenceDot = null, noWrapper = false } = opts || {};
+            const url = playerAvatars[userId];
+            const bust = playerAvatarBust[userId] ? `?t=${playerAvatarBust[userId]}` : "";
+            const initial = (username || "?").charAt(0).toUpperCase();
+            const fallback = `<div class="w-full h-full rounded-full bg-indigo-600 flex items-center justify-center ${textSize} font-bold select-none">${initial}</div>`;
+            const inner = url
+                ? `<img src="${url}${bust}" alt="" class="w-full h-full rounded-full object-cover select-none" onerror='this.outerHTML=\`${fallback.replace(/`/g, "\\`")}\`'>`
+                : fallback;
+            if (noWrapper) return inner;
+            const dot = presenceDot
+                ? `<span class="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-gray-900 ${presenceDot}"></span>`
+                : "";
+            return `<div class="relative ${size} shrink-0">${inner}${dot}</div>`;
+        }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -306,8 +329,7 @@
                     list.forEach(c => {
                         contactUnread[c.user_id] = c.unread_count;
                         contactNames[c.user_id] = c.username;
-                        if (c.avatar_url && typeof playerAvatars !== 'undefined')
-                            playerAvatars[c.user_id] = c.avatar_url;
+                        if (c.avatar_url) playerAvatars[c.user_id] = c.avatar_url;
                         upsertContact(c);
                     });
                 }
@@ -349,15 +371,9 @@
             }
             const meta = getPresenceMeta(activeContact.user_id);
             const uid = activeContact.user_id;
-            const url = typeof playerAvatars !== 'undefined' ? playerAvatars[uid] : undefined;
-            const initial = activeContact.username.charAt(0).toUpperCase();
-            const avatarHtml = url
-                ? `<img src="${url}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0"
-                        onerror="this.outerHTML=\`<div class='w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold shrink-0'>${initial}</div>\`">`
-                : `<div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold shrink-0">${initial}</div>`;
             title.innerHTML = `
                 <span class="flex min-w-0 items-center gap-2">
-                    ${avatarHtml}
+                    ${renderAvatar(uid, activeContact.username, { size: "w-8 h-8", textSize: "text-sm" })}
                     <span class="truncate">${activeContact.username}</span>
                     <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${meta.badge}">
                         <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>
@@ -376,12 +392,11 @@
                     username: player.username,
                 };
                 if (player.username) contactNames[player.user_id] = player.username;
-                if (player.avatar_url && typeof playerAvatars !== 'undefined')
-                    playerAvatars[player.user_id] = player.avatar_url;
+                if (player.avatar_url) playerAvatars[player.user_id] = player.avatar_url;
             });
 
             Object.entries(contactNames).forEach(([userId, username]) => {
-                if (userId !== String(CURRENT_USER_ID)) {
+                if (userId !== String(CURRENT_USER_ID) && userId in contactUnread) {
                     upsertContact({ user_id: userId, username });
                 }
             });
@@ -402,7 +417,7 @@
                     delete contactOfflineTimers[userId];
                     updateChatPresence(getStablePresencePlayers());
                     if (typeof onChange === 'function') onChange(getStablePresencePlayers());
-                }, 5000);
+                }, 3000);
             });
 
             nowPresent.forEach((player, userId) => {
@@ -414,8 +429,10 @@
                     online: true,
                     playing: Boolean(player.playing),
                     username: player.username,
+                    avatar_url: player.avatar_url || undefined,
                 };
                 if (player.username) contactNames[userId] = player.username;
+                if (player.avatar_url) playerAvatars[userId] = player.avatar_url;
             });
 
             const stablePlayers = getStablePresencePlayers();
@@ -434,17 +451,7 @@
         }
 
         function contactAvatarHtml(userId, username, presenceDot) {
-            const url = typeof playerAvatars !== 'undefined' ? playerAvatars[userId] : undefined;
-            const initial = username.charAt(0).toUpperCase();
-            const dot = `<span class="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-gray-900 ${presenceDot}"></span>`;
-            const initials = `<div class='w-full h-full rounded-full bg-indigo-600 flex items-center justify-center text-lg font-bold select-none'>${initial}</div>`;
-            if (!url) return `<div class="relative w-10 h-10 shrink-0">${initials}${dot}</div>`;
-            return `
-                <div class="relative w-10 h-10 shrink-0">
-                    <img src="${url}" alt="" class="w-10 h-10 rounded-full object-cover"
-                         onerror="this.outerHTML=\`${initials.replace(/`/g, '\\`')}\`">
-                    ${dot}
-                </div>`;
+            return renderAvatar(userId, username, { presenceDot });
         }
 
         function upsertContact(c) {

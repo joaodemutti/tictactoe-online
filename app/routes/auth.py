@@ -37,17 +37,20 @@ async def signup_page(request: Request):
 async def signup(
     request: Request,
     username: str = Form(...),
-    email: str = Form(...),
+    email: str | None = Form(None),
     password: str = Form(...),
     avatar: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
 ):
     lang = detect_language(request)
     _ = get_translator(lang)
+    email = email.strip() if email else None
+    email = email or None
 
-    result = await db.execute(
-        select(User).where(or_(User.username == username, User.email == email))
-    )
+    conditions = [User.username == username]
+    if email:
+        conditions.append(User.email == email)
+    result = await db.execute(select(User).where(or_(*conditions)))
     if result.scalar_one_or_none():
         return templates.TemplateResponse(
             request,
@@ -152,7 +155,7 @@ async def update_profile(
 ):
     body = await request.json()
     username = (body.get("username") or "").strip()
-    email = (body.get("email") or "").strip()
+    email = (body.get("email") or "").strip() or None
     password = body.get("password") or ""
     lang = body.get("language_code") or ""
 
@@ -160,14 +163,12 @@ async def update_profile(
 
     if not username:
         return JSONResponse({"error": _("error_username_required")}, status_code=400)
-    if not email:
-        return JSONResponse({"error": _("error_email_required")}, status_code=400)
 
+    conditions = [User.username == username]
+    if email:
+        conditions.append(User.email == email)
     result = await db.execute(
-        select(User).where(
-            User.id != current_user.id,
-            or_(User.username == username, User.email == email),
-        )
+        select(User).where(User.id != current_user.id, or_(*conditions))
     )
     if result.scalar_one_or_none():
         return JSONResponse({"error": _("error_username_email_taken")}, status_code=400)

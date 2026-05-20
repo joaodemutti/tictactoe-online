@@ -7,8 +7,6 @@ let playersOnline = [];
 const ongoingMatches = {};
 let currentUsername = CURRENT_USERNAME;
 let currentEmail = CURRENT_EMAIL;
-const playerAvatars = {};     // user_id → avatar_url (cache)
-const playerAvatarBust = {}; // user_id → cache-bust timestamp
 
 function connectHub() {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -55,16 +53,8 @@ function onPlayersOnline(data) {
     if (typeof updateChatPresence === "function") updateChatPresence(data.players);
 }
 
-function avatarHtml(userId, username, sizeClass = "w-14 h-14", textClass = "text-2xl") {
-    const url = playerAvatars[userId];
-    const initial = username.charAt(0).toUpperCase();
-    const fallback = `<div class='${sizeClass} rounded-full bg-indigo-600 flex items-center justify-center ${textClass} font-bold select-none'>${initial}</div>`;
-    if (url) {
-        const bust = playerAvatarBust[userId] ? `?t=${playerAvatarBust[userId]}` : "";
-        return `<img src="${url}${bust}" alt="" class="${sizeClass} rounded-full object-cover select-none"
-                     onerror="this.outerHTML=\`${fallback.replace(/`/g, "\\`")}\`">`;
-    }
-    return fallback;
+function avatarHtml(userId, username, size = "w-14 h-14", textSize = "text-2xl") {
+    return renderAvatar(userId, username, { size, textSize });
 }
 
 function openProfileModal() {
@@ -127,9 +117,8 @@ async function saveProfile(event) {
                 feedback.className = "min-h-5 text-sm text-red-400";
                 return;
             }
-            const bust = Date.now();
             playerAvatars[CURRENT_USER_ID] = avatarData.avatar_url;
-            playerAvatarBust[CURRENT_USER_ID] = bust;
+            playerAvatarBust[CURRENT_USER_ID] = Date.now();
         }
 
         currentUsername = profileData.username;

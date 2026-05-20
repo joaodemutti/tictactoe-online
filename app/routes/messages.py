@@ -27,14 +27,26 @@ async def get_contacts(
                     read_at
                 FROM messages
                 WHERE sender_id = :uid OR receiver_id = :uid
+            ),
+            match_partners AS (
+                SELECT mp2.user_id AS partner_id
+                FROM match_players mp1
+                JOIN match_players mp2 ON mp1.match_id = mp2.match_id AND mp2.user_id != :uid
+                WHERE mp1.user_id = :uid
+            ),
+            all_partners AS (
+                SELECT partner_id FROM match_partners
+                UNION
+                SELECT partner_id FROM convos
             )
-            SELECT c.partner_id,
+            SELECT ap.partner_id,
                    u.username,
                    u.avatar_url,
                    COUNT(*) FILTER (WHERE c.sender_id != :uid AND c.read_at IS NULL) AS unread_count
-            FROM convos c
-            JOIN users u ON u.id = c.partner_id
-            GROUP BY c.partner_id, u.username, u.avatar_url
+            FROM all_partners ap
+            JOIN users u ON u.id = ap.partner_id
+            LEFT JOIN convos c ON c.partner_id = ap.partner_id
+            GROUP BY ap.partner_id, u.username, u.avatar_url
         """).bindparams(bindparam("uid", type_=PGUUID(as_uuid=True))),
         {"uid": user.id},
     )
