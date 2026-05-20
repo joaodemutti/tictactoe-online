@@ -1,41 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up — Tic-Tac-Toe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ _('btn_signup') }} — {{ _('page_title') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        const LANG = {{ lang | tojson }};
+        const I18N = {{ i18n | tojson }};
+        function t(key, vars) {
+            let s = I18N[key] !== undefined ? I18N[key] : key;
+            if (vars) for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+            return s;
+        }
+        async function setLang(lang) {
+            await fetch('/language', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lang }),
+            });
+            location.reload();
+        }
+    </script>
+    <style>input, textarea, select { font-size: 16px !important; }</style>
 </head>
-<body class="min-h-screen bg-gray-950 flex items-center justify-center">
+<body class="bg-gray-950 flex items-center justify-center" style="min-height:100dvh;overflow-x:hidden">
     <div class="w-full max-w-sm px-4">
-        <h1 class="text-3xl font-bold text-white text-center mb-8">Tic-Tac-Toe</h1>
-        <form method="post" action="/signup" class="bg-gray-900 rounded-2xl p-8 space-y-5">
+        <div class="flex justify-end mb-3 gap-1">
+            <button onclick="setLang('en')"
+                    class="px-2 py-0.5 rounded text-xs font-semibold transition-colors
+                           {% if lang == 'en' %}bg-indigo-600 text-white{% else %}text-gray-500 hover:text-white{% endif %}">
+                EN
+            </button>
+            <button onclick="setLang('pt-BR')"
+                    class="px-2 py-0.5 rounded text-xs font-semibold transition-colors
+                           {% if lang == 'pt-BR' %}bg-indigo-600 text-white{% else %}text-gray-500 hover:text-white{% endif %}">
+                PT-BR
+            </button>
+        </div>
+        <h1 class="text-3xl font-bold text-white text-center mb-8">{{ _('page_title') }}</h1>
+        <form method="post" action="/signup" enctype="multipart/form-data" class="bg-gray-900 rounded-2xl p-8 space-y-5">
             {% if error %}
             <p class="text-red-400 text-sm text-center">{{ error }}</p>
             {% endif %}
+
+            <!-- Avatar picker -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="relative group cursor-pointer" onclick="document.getElementById('signup-avatar-input').click()">
+                    <div id="signup-avatar-preview"
+                         class="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center
+                                text-3xl font-bold text-white select-none overflow-hidden">
+                        ?
+                    </div>
+                    <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center
+                                opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0
+                                     011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0
+                                     01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <input id="signup-avatar-input" type="file" name="avatar" accept="image/*" class="hidden">
+                <p id="signup-avatar-label" class="text-xs text-gray-500">{{ _('profile_avatar_change') }}</p>
+            </div>
+
             <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                <label class="block text-sm font-medium text-gray-400 mb-1">{{ _('label_username') }}</label>
                 <input type="text" name="username" required maxlength="50" autocomplete="username"
                     class="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                <label class="block text-sm font-medium text-gray-400 mb-1">{{ _('label_email') }}</label>
                 <input type="email" name="email" required autocomplete="email"
                     class="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                <label class="block text-sm font-medium text-gray-400 mb-1">{{ _('label_password') }}</label>
                 <input type="password" name="password" required autocomplete="new-password"
                     class="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <button type="submit"
                 class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors">
-                Create account
+                {{ _('btn_signup') }}
             </button>
             <p class="text-center text-sm text-gray-500">
-                Have an account? <a href="/login" class="text-indigo-400 hover:text-indigo-300">Log in</a>
+                {{ _('link_have_account') }} <a href="/login" class="text-indigo-400 hover:text-indigo-300">{{ _('link_log_in') }}</a>
             </p>
         </form>
     </div>
+    <script>
+        document.getElementById('signup-avatar-input').addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            const preview = document.getElementById('signup-avatar-preview');
+            const label = document.getElementById('signup-avatar-label');
+            const url = URL.createObjectURL(file);
+            preview.innerHTML = `<img src="${url}" alt="" class="w-full h-full object-cover"
+                                      onload="URL.revokeObjectURL(this.src)">`;
+            label.textContent = file.name;
+            label.className = 'text-xs text-emerald-400 truncate max-w-[160px]';
+        });
+
+        // Update the avatar circle initial when username is typed
+        document.querySelector('input[name="username"]').addEventListener('input', function () {
+            const preview = document.getElementById('signup-avatar-preview');
+            const hasPicture = preview.querySelector('img');
+            if (!hasPicture) {
+                preview.textContent = this.value.charAt(0).toUpperCase() || '?';
+            }
+        });
+    </script>
 </body>
 </html>

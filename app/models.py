@@ -34,6 +34,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    language_code = Column(String(10), nullable=False, default="en")
+    avatar_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=_now)
 
     match_players = relationship("MatchPlayer", back_populates="user")

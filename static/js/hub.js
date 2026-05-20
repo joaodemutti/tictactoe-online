@@ -7,6 +7,8 @@ let playersOnline = [];
 const ongoingMatches = {};
 let currentUsername = CURRENT_USERNAME;
 let currentEmail = CURRENT_EMAIL;
+const playerAvatars = {};     // user_id → avatar_url (cache)
+const playerAvatarBust = {}; // user_id → cache-bust timestamp
 
 function connectHub() {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -53,6 +55,18 @@ function onPlayersOnline(data) {
     if (typeof updateChatPresence === "function") updateChatPresence(data.players);
 }
 
+function avatarHtml(userId, username, sizeClass = "w-14 h-14", textClass = "text-2xl") {
+    const url = playerAvatars[userId];
+    const initial = username.charAt(0).toUpperCase();
+    const fallback = `<div class='${sizeClass} rounded-full bg-indigo-600 flex items-center justify-center ${textClass} font-bold select-none'>${initial}</div>`;
+    if (url) {
+        const bust = playerAvatarBust[userId] ? `?t=${playerAvatarBust[userId]}` : "";
+        return `<img src="${url}${bust}" alt="" class="${sizeClass} rounded-full object-cover select-none"
+                     onerror="this.outerHTML=\`${fallback.replace(/`/g, "\\`")}\`">`;
+    }
+    return fallback;
+}
+
 function openProfileModal() {
     document.getElementById("profile-username").value = currentUsername;
     document.getElementById("profile-email").value = currentEmail;
@@ -60,43 +74,73 @@ function openProfileModal() {
     const feedback = document.getElementById("profile-feedback");
     feedback.textContent = "";
     feedback.className = "min-h-5 text-sm text-gray-500";
+    const avatarFeedback = document.getElementById("avatar-feedback");
+    if (avatarFeedback) {
+        avatarFeedback.textContent = t('profile_avatar_change') || "Change photo";
+        avatarFeedback.className = "text-xs text-gray-500";
+    }
     document.getElementById("profile-modal").classList.remove("hidden");
 }
 
 function closeProfileModal() {
+    resetAvatarPicker();
     document.getElementById("profile-modal").classList.add("hidden");
 }
 
 async function saveProfile(event) {
     event.preventDefault();
     const feedback = document.getElementById("profile-feedback");
-    feedback.textContent = "Saving...";
+    feedback.textContent = t('status_saving');
     feedback.className = "min-h-5 text-sm text-gray-500";
 
     try {
-        const res = await fetch("/profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                username: document.getElementById("profile-username").value.trim(),
-                email: document.getElementById("profile-email").value.trim(),
-                password: document.getElementById("profile-password").value,
+        const [profileRes, avatarRes] = await Promise.all([
+            fetch("/profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: document.getElementById("profile-username").value.trim(),
+                    email: document.getElementById("profile-email").value.trim(),
+                    password: document.getElementById("profile-password").value,
+                    language_code: typeof selectedProfileLang !== "undefined" ? selectedProfileLang : LANG,
+                }),
             }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            feedback.textContent = data.error || "Could not update profile.";
+            pendingAvatarFile ? (() => {
+                const fd = new FormData();
+                fd.append("file", pendingAvatarFile);
+                return fetch("/profile/avatar", { method: "POST", body: fd });
+            })() : Promise.resolve(null),
+        ]);
+
+        const profileData = await profileRes.json();
+        if (!profileRes.ok) {
+            feedback.textContent = profileData.error || t('error_could_not_update');
             feedback.className = "min-h-5 text-sm text-red-400";
             return;
         }
 
-        currentUsername = data.username;
-        currentEmail = data.email;
-        feedback.textContent = "Saved.";
+        if (avatarRes) {
+            let avatarData;
+            try { avatarData = await avatarRes.json(); } catch (_) { avatarData = {}; }
+            if (!avatarRes.ok) {
+                feedback.textContent = avatarData.error || t('error_could_not_update');
+                feedback.className = "min-h-5 text-sm text-red-400";
+                return;
+            }
+            const bust = Date.now();
+            playerAvatars[CURRENT_USER_ID] = avatarData.avatar_url;
+            playerAvatarBust[CURRENT_USER_ID] = bust;
+        }
+
+        currentUsername = profileData.username;
+        currentEmail = profileData.email;
+        pendingAvatarFile = null;
+        originalAvatarHTML = null;
+        feedback.textContent = t('status_saved');
         feedback.className = "min-h-5 text-sm text-emerald-400";
         setTimeout(() => location.reload(), 300);
     } catch (_) {
-        feedback.textContent = "Could not update profile.";
+        feedback.textContent = t('error_could_not_update');
         feedback.className = "min-h-5 text-sm text-red-400";
     }
 }
@@ -118,42 +162,43 @@ function renderPlayersOnline() {
     });
 
     if (players.length === 0) {
-        grid.innerHTML = '<p class="col-span-full text-center text-gray-600 py-16">No players online right now.</p>';
+        grid.innerHTML = `<p class="col-span-full text-center text-gray-600 py-16">${t('hub_no_players')}</p>`;
         return;
     }
+
+    players.forEach(p => {
+        if (p.avatar_url) playerAvatars[p.user_id] = p.avatar_url;
+    });
 
     grid.innerHTML = players.map(p => `
         <div class="bg-gray-900 rounded-2xl p-5 flex flex-col items-center gap-3
                     hover:bg-gray-800 cursor-pointer transition-colors player-card"
              data-user-id="${p.user_id}"
              data-username="${p.username}">
-            <div class="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center
-                        text-2xl font-bold select-none">
-                ${p.username.charAt(0).toUpperCase()}
-            </div>
+            ${avatarHtml(p.user_id, p.username)}
             <span class="text-sm font-medium">${p.username}</span>
             ${p.user_id === CURRENT_USER_ID
                 ? `<span class="mt-1 px-3 py-1.5 rounded-lg border border-sky-600 text-sky-400
                            text-xs font-semibold">
-                       You
+                       ${t('hub_you')}
                    </span>`
                 : ongoingMatches[p.user_id]
                 ? `<a href="/match/${ongoingMatches[p.user_id]}"
                       class="join-match mt-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg
                              text-xs font-semibold transition-colors"
                       data-match-id="${ongoingMatches[p.user_id]}">
-                       Join game
+                       ${t('btn_join_game')}
                    </a>`
                 : p.playing
                 ? `<span class="mt-1 px-3 py-1.5 rounded-lg border border-amber-600 text-amber-400
                            text-xs font-semibold">
-                       Playing...
+                       ${t('hub_playing')}
                    </span>`
                 : `<button type="button"
                            class="invite-btn mt-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg
                                   text-xs font-semibold transition-colors"
                            data-user-id="${p.user_id}">
-                       Invite
+                       ${t('btn_invite')}
                    </button>`
             }
         </div>
@@ -172,16 +217,14 @@ async function loadOngoingMatches() {
 }
 
 document.getElementById("players-grid").addEventListener("click", (e) => {
-    const action = e.target.closest("button, a");
-    if (action) {
-        e.stopPropagation();
-    }
-
     const inviteBtn = e.target.closest(".invite-btn");
     if (inviteBtn) {
         sendInvite(inviteBtn.dataset.userId);
         return;
     }
+
+    // Let links and other buttons handle themselves without opening the chat
+    if (e.target.closest("a, button")) return;
 
     const card = e.target.closest(".player-card");
     if (!card) return;
@@ -230,12 +273,12 @@ function renderInvite(data) {
                 &times;
             </button>
             <p class="text-sm text-white mb-3">
-                <strong class="text-indigo-400">${data.from_username}</strong> challenged you to a game!
+                ${t('chat_challenged', { name: `<strong class="text-indigo-400">${data.from_username}</strong>` })}
             </p>
             <a href="/match/${data.match_id}"
                class="block w-full text-center py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg
                       text-sm font-semibold transition-colors">
-                Join game
+                ${t('btn_join_game')}
             </a>
         `;
         container.prepend(card);
@@ -293,3 +336,31 @@ document.getElementById("invites-container").addEventListener("click", (e) => {
 });
 
 document.getElementById("profile-form").addEventListener("submit", saveProfile);
+
+let pendingAvatarFile = null;
+let originalAvatarHTML = null;
+
+function resetAvatarPicker() {
+    pendingAvatarFile = null;
+    document.getElementById("avatar-input").value = "";
+    const feedback = document.getElementById("avatar-feedback");
+    feedback.textContent = t('profile_avatar_change') || "Change photo";
+    feedback.className = "text-xs text-gray-500";
+    if (originalAvatarHTML !== null) {
+        document.getElementById("avatar-preview").innerHTML = originalAvatarHTML;
+        originalAvatarHTML = null;
+    }
+}
+
+document.getElementById("avatar-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingAvatarFile = file;
+
+    const preview = document.getElementById("avatar-preview");
+    if (originalAvatarHTML === null) originalAvatarHTML = preview.innerHTML;
+    const objectUrl = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${objectUrl}" alt="" class="w-full h-full object-cover"
+                              onload="URL.revokeObjectURL(this.src)">`;
+    document.getElementById("avatar-feedback").textContent = "";
+});

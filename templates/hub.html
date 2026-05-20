@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Hub — Tic-Tac-Toe{% endblock %}
+{% block title %}{{ _('hub_heading') }} — {{ _('page_title') }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-10">
     <div class="flex items-center justify-between mb-10">
-        <h1 class="text-2xl font-bold tracking-tight">Online Players</h1>
+        <h1 class="text-2xl font-bold tracking-tight">{{ _('hub_heading') }}</h1>
     </div>
 
     <div id="players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <p class="col-span-full text-center text-gray-600 py-16">Connecting...</p>
+        <p class="col-span-full text-center text-gray-600 py-16">{{ _('hub_connecting') }}</p>
     </div>
 </div>
 
@@ -21,36 +21,79 @@
     <div class="min-h-full flex items-center justify-center">
         <div class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-bold text-white">Your Account</h2>
+                <h2 class="text-xl font-bold text-white">{{ _('profile_title') }}</h2>
                 <button type="button" onclick="closeProfileModal()"
-                        class="text-gray-400 hover:text-white transition-colors">Close</button>
+                        class="text-gray-400 hover:text-white transition-colors">{{ _('btn_close') }}</button>
             </div>
 
             <form id="profile-form" class="space-y-4">
+                <!-- Avatar -->
+                <div class="flex flex-col items-center gap-3">
+                    <div id="avatar-click-target" class="relative group cursor-pointer"
+                         onclick="document.getElementById('avatar-input').click()">
+                        <div id="avatar-preview"
+                             class="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center
+                                    text-3xl font-bold select-none overflow-hidden">
+                            {% if user.avatar_url %}
+                                <img src="{{ user.avatar_url }}" alt="" class="w-full h-full object-cover">
+                            {% else %}
+                                {{ user.username[0].upper() }}
+                            {% endif %}
+                        </div>
+                        <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center
+                                    opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0
+                                         011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0
+                                         01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <input id="avatar-input" type="file" accept="image/*" class="hidden">
+                    <p id="avatar-feedback" class="text-xs text-gray-500">{{ _('profile_avatar_change') }}</p>
+                </div>
+
                 <div>
-                    <label for="profile-username" class="block text-sm text-gray-400 mb-2">Username</label>
+                    <label for="profile-username" class="block text-sm text-gray-400 mb-2">{{ _('label_username') }}</label>
                     <input id="profile-username" type="text"
                            class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
-                    <label for="profile-email" class="block text-sm text-gray-400 mb-2">Email</label>
+                    <label for="profile-email" class="block text-sm text-gray-400 mb-2">{{ _('label_email') }}</label>
                     <input id="profile-email" type="email"
                            class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
                 </div>
                 <div>
-                    <label for="profile-password" class="block text-sm text-gray-400 mb-2">New password</label>
-                    <input id="profile-password" type="password" placeholder="Leave blank to keep current password"
+                    <label for="profile-password" class="block text-sm text-gray-400 mb-2">{{ _('label_new_password') }}</label>
+                    <input id="profile-password" type="password" placeholder="{{ _('placeholder_keep_password') }}"
                            class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">{{ _('profile_language') }}</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="setProfileLang('en')" id="lang-btn-en"
+                                class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
+                                       {% if lang == 'en' %}border-indigo-500 text-indigo-400 bg-indigo-950/40{% else %}border-gray-700 text-gray-400 hover:border-gray-500{% endif %}">
+                            English
+                        </button>
+                        <button type="button" onclick="setProfileLang('pt-BR')" id="lang-btn-pt"
+                                class="flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors
+                                       {% if lang == 'pt-BR' %}border-indigo-500 text-indigo-400 bg-indigo-950/40{% else %}border-gray-700 text-gray-400 hover:border-gray-500{% endif %}">
+                            Português
+                        </button>
+                    </div>
                 </div>
                 <p id="profile-feedback" class="min-h-5 text-sm text-gray-500"></p>
                 <div class="flex gap-3 pt-2">
                     <button type="submit"
                             class="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500 transition-colors">
-                        Save
+                        {{ _('btn_save') }}
                     </button>
                     <button type="button" onclick="signOut()"
                             class="flex-1 rounded-xl border border-red-700 px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-950/50 transition-colors">
-                        Sign out
+                        {{ _('btn_sign_out') }}
                     </button>
                 </div>
             </form>
@@ -65,6 +108,22 @@
     const CURRENT_USER_ID = {{ user.id | tojson }};
     const CURRENT_USERNAME = {{ user.username | tojson }};
     const CURRENT_EMAIL = {{ user.email | tojson }};
+
+    let selectedProfileLang = {{ lang | tojson }};
+
+    function setProfileLang(lang) {
+        selectedProfileLang = lang;
+        document.getElementById('lang-btn-en').className =
+            'flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors ' +
+            (lang === 'en'
+                ? 'border-indigo-500 text-indigo-400 bg-indigo-950/40'
+                : 'border-gray-700 text-gray-400 hover:border-gray-500');
+        document.getElementById('lang-btn-pt').className =
+            'flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors ' +
+            (lang === 'pt-BR'
+                ? 'border-indigo-500 text-indigo-400 bg-indigo-950/40'
+                : 'border-gray-700 text-gray-400 hover:border-gray-500');
+    }
 </script>
 <script src="/static/js/hub.js"></script>
 {% endblock %}

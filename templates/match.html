@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Match - Tic-Tac-Toe{% endblock %}
+{% block title %}{{ _('page_title') }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col">
+<div class="w-full flex flex-col" style="min-height:100dvh;max-height:100dvh">
     <a href="/"
-       class="fixed left-6 top-5 z-40 text-base font-semibold text-gray-400 hover:text-white transition-colors">
-        &larr; Back to Hub
+        class="fixed left-6 top-5 z-40 text-base font-semibold text-gray-400 hover:text-white transition-colors">
+        {{ _('match_back_hub') }}
     </a>
 
     <main class="relative flex-1 flex flex-col items-center justify-center gap-6 py-8">
-        <div id="waiting-status" class="absolute inset-0 z-10 backdrop-blur-sm flex flex-col items-center justify-center text-center">
+        <div id="waiting-status"
+            class="absolute inset-0 z-10 backdrop-blur-sm flex flex-col items-center justify-center text-center">
             <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full
                         animate-spin mx-auto mb-4"></div>
-            <p class="text-xl font-semibold text-white">Waiting for player...</p>
-            <p class="text-sm text-gray-500 mt-2">Both players must be on this page to start</p>
+            <p class="text-xl font-semibold text-white">{{ _('match_waiting') }}</p>
+            <p class="text-sm text-gray-500 mt-2">{{ _('match_waiting_sub') }}</p>
             <p id="waiting-offline-label" class="hidden text-sm text-amber-400 mt-4"></p>
         </div>
 
@@ -24,38 +25,115 @@
             <span id="turn-text"></span>
         </div>
 
-        <!-- 3x3 board - cells injected by JS -->
-        <div id="board" class="grid grid-cols-3 w-72 h-72 sm:w-96 sm:h-96"></div>
+        <!-- Board + chat stacked, centered together -->
+        <div class="flex flex-col items-center gap-4 w-full">
+
+            <!-- Board row: X player | board | O player -->
+            <div class="flex items-center gap-2 sm:gap-6 justify-center w-full">
+
+                <!-- X player slot -->
+                <div id="player-slot-x" class="invisible flex flex-col items-center gap-1 shrink-0 relative">
+                    <div id="msg-bubble-x" class="hidden absolute bottom-full left-1/2 mb-3 z-10 pointer-events-none
+                            w-max max-w-[9rem] rounded-2xl bg-white px-3 py-2
+                            text-center text-xs text-gray-900 shadow-xl [overflow-wrap:anywhere] origin-bottom">
+                        <span id="msg-bubble-x-text"></span>
+                        <span class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2
+                                 border-l-[6px] border-r-[6px] border-t-[7px]
+                                 border-l-transparent border-r-transparent border-t-white"></span>
+                    </div>
+                    <div id="avatar-x" class="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-indigo-600
+                            flex items-center justify-center text-lg sm:text-2xl font-bold
+                            select-none overflow-hidden shrink-0"></div>
+                    <span id="name-x"
+                        class="text-[10px] sm:text-xs text-gray-400 truncate max-w-[3.5rem] sm:max-w-[5rem] text-center"></span>
+                    <span class="text-base sm:text-lg font-bold text-red-400 leading-none">X</span>
+                </div>
+
+                <!-- 3x3 board - cells injected by JS -->
+                <div id="board" class="grid grid-cols-3 w-72 h-72 sm:w-96 sm:h-96 shrink-0"></div>
+
+                <!-- O player slot -->
+                <div id="player-slot-o" class="invisible flex flex-col items-center gap-1 shrink-0 relative">
+                    <div id="msg-bubble-o" class="hidden absolute bottom-full left-1/2 mb-3 z-10 pointer-events-none
+                            w-max max-w-[9rem] rounded-2xl bg-white px-3 py-2
+                            text-center text-xs text-gray-900 shadow-xl [overflow-wrap:anywhere] origin-bottom">
+                        <span id="msg-bubble-o-text"></span>
+                        <span class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2
+                                 border-l-[6px] border-r-[6px] border-t-[7px]
+                                 border-l-transparent border-r-transparent border-t-white"></span>
+                    </div>
+                    <div id="avatar-o" class="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-indigo-600
+                            flex items-center justify-center text-lg sm:text-2xl font-bold
+                            select-none overflow-hidden shrink-0"></div>
+                    <span id="name-o"
+                        class="text-[10px] sm:text-xs text-gray-400 truncate max-w-[3.5rem] sm:max-w-[5rem] text-center"></span>
+                    <span class="text-base sm:text-lg font-bold text-blue-400 leading-none">O</span>
+                </div>
+
+            </div>
+
+            <!-- Inline chat input — revealed when game starts -->
+            <div id="match-chat-row" class="hidden flex gap-2 w-96 relative">
+
+                <!-- Emoji picker panel -->
+                <div id="emoji-picker" class="hidden absolute bottom-full mb-2 left-0 z-50
+                        bg-gray-900 border border-gray-700 rounded-2xl p-2 shadow-2xl
+                        grid grid-cols-8 gap-0.5 w-64">
+                    {% set emojis = ['😀','😂','🤣','😅','😊','😍','🥰','😎',
+                    '😭','😤','😡','🤯','😱','🥳','😴','🤔',
+                    '👍','👎','👏','🙌','🤝','🙏','💪','✌️',
+                    '❤️','🔥','💀','👀','💯','🎉','⚡','💥',
+                    '😈','🤡','👻','🐷','🐸','🦆','🐢','🐧',
+                    '🍕','🍔','☕','🍺','🏆','🎮','⚽','🎯'] %}
+                    {% for e in emojis %}
+                    <button type="button" onclick="appendEmoji('{{ e }}')"
+                        class="text-xl p-1 rounded-lg hover:bg-gray-700 transition-colors leading-none">
+                        {{ e }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Emoji toggle button -->
+                <button type="button" id="emoji-btn" onclick="toggleEmojiPicker()" class="text-xl px-2 py-2 bg-gray-900 hover:bg-gray-800 rounded-xl
+                           transition-colors shrink-0 leading-none">
+                    😀
+                </button>
+
+                <input id="match-chat-input" type="text" placeholder="{{ _('chat_placeholder') }}" class="flex-1 bg-gray-900 rounded-xl px-4 py-2 text-sm text-white
+                          placeholder-gray-600 outline-none focus:ring-1 focus:ring-indigo-500">
+                <button onclick="sendMatchChatMessage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl
+                           text-sm font-semibold transition-colors shrink-0">
+                    {{ _('btn_send') }}
+                </button>
+            </div>
+
+        </div><!-- end board+chat wrapper -->
     </main>
 </div>
 
 <!-- Role selection modal - shown once when both players first arrive -->
-<div id="role-modal"
-     class="fixed inset-0 flex items-center justify-center z-30 hidden pointer-events-none">
+<div id="role-modal" class="fixed inset-0 flex items-center justify-center z-30 hidden pointer-events-none">
     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm mx-4 pointer-events-auto">
 
-        <h2 class="text-xl font-bold text-center text-white">Who is Who</h2>
+        <h2 class="text-xl font-bold text-center text-white">{{ _('match_who_is_who') }}</h2>
         <p id="role-status-label" class="hidden mt-2 mb-3 text-center text-sm font-semibold text-amber-400"></p>
 
         <!-- Both player avatars with their live selections -->
         <div class="flex justify-around mb-7 mt-3" id="players-row"></div>
 
-        <h2 class="text-xl font-bold text-center text-white mb-6">Who will you be?</h2>
+        <h2 class="text-xl font-bold text-center text-white mb-6">{{ _('match_who_will_you_be') }}</h2>
 
         <!-- Role buttons: X / ? / O -->
         <div class="flex gap-3 justify-center mb-3" id="role-buttons">
-            <button data-role="x"
-                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+            <button data-role="x" class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
                            font-bold text-lg hover:border-red-500 hover:text-red-400 transition-colors">
                 X
             </button>
-            <button data-role="random"
-                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+            <button data-role="random" class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
                            font-bold text-lg hover:border-emerald-500 hover:text-emerald-400 transition-colors">
                 ?
             </button>
-            <button data-role="o"
-                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+            <button data-role="o" class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
                            font-bold text-lg hover:border-blue-500 hover:text-blue-400 transition-colors">
                 O
             </button>
@@ -63,18 +141,17 @@
 
         <!-- Countdown - hidden until a selection is made -->
         <div id="countdown-wrap" class="hidden mt-6 text-center">
-            <p class="text-xs text-gray-500 mb-1 uppercase tracking-widest">Starting in</p>
+            <p class="text-xs text-gray-500 mb-1 uppercase tracking-widest">{{ _('match_starting_in') }}</p>
             <p id="countdown-num" class="text-5xl font-bold text-white tabular-nums">5</p>
         </div>
     </div>
 </div>
 
 <!-- Game over overlay - shown on win or draw, auto-redirects to hub -->
-<div id="gameover-overlay"
-     class="fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center
+<div id="gameover-overlay" class="fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center
             justify-center z-40 hidden">
     <p id="gameover-text" class="text-5xl font-bold text-white mb-4"></p>
-    <p class="text-sm text-gray-500">Returning to hub...</p>
+    <p class="text-sm text-gray-500">{{ _('match_returning_hub') }}</p>
 </div>
 {% endblock %}
 

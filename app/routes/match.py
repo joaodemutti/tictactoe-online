@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import aliased
 
 from app.deps import get_db, get_current_user
+from app.i18n import TRANSLATIONS, detect_language, get_translator
 from app.models import User, Match, MatchPlayer, MatchStatus
 from app.templating import templates
 from app.ws.manager import manager
@@ -157,10 +158,11 @@ async def match_page(
         .where(MatchPlayer.match_id == match_id)
     )
     players = [
-        {"user_id": str(u.id), "username": u.username}
+        {"user_id": str(u.id), "username": u.username, "avatar_url": u.avatar_url}
         for u in result.scalars().all()
     ]
 
+    lang = detect_language(request, current_user)
     return templates.TemplateResponse(
         request,
         "match.html",
@@ -168,5 +170,8 @@ async def match_page(
             "user": current_user,
             "match_id": str(match.id),
             "players": players,
+            "lang": lang,
+            "_": get_translator(lang),
+            "i18n": TRANSLATIONS[lang],
         },
     )

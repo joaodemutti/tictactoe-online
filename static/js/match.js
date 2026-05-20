@@ -25,7 +25,7 @@ function connectMatch() {
         if (data.type === "game_start")    onGameStart(data);
         if (data.type === "move")          onMove(data);
         if (data.type === "game_over")     onGameOver(data);
-        if (data.type === "message")       onNewMessage(data);
+        if (data.type === "message")       { onNewMessage(data); showMatchMessageBubble(data); }
         if (data.type === "message_read")  onMessageRead(data);
         if (data.type === "invite")        onInviteReceived(data);
         if (data.type === "players_online") onPlayersOnline(data);
@@ -34,10 +34,16 @@ function connectMatch() {
 
 connectMatch();
 
+// Seed avatar cache from match player list so the chat drawer can show photos
+const playerAvatars = {};
+const playerAvatarBust = {};
+MATCH_PLAYERS.forEach(p => { if (p.avatar_url) playerAvatars[p.user_id] = p.avatar_url; });
+
 // ── Game state ────────────────────────────────────────────────────────────────
 
 let board       = Array(9).fill(null);   // "X" | "O" | null per cell
 let myRole      = null;                  // "x" | "o"
+let currentRoles = {};                   // user_id → "x" | "o"
 let currentTurn = null;                  // user_id whose turn it is
 let gameOver    = false;
 let countdownInterval = null;
@@ -47,6 +53,70 @@ let selectedRole = null;
 let pendingRoleSelections = {};
 const onlinePlayerIds = new Set();
 const playingPlayerIds = new Set();
+const msgBubbleTimers = {};              // role → timeout id
+
+// ── Player slots ─────────────────────────────────────────────────────────────
+
+function setupPlayerPanels(roles) {
+    currentRoles = roles;
+    document.getElementById("match-chat-row")?.classList.remove("hidden");
+    for (const [userId, role] of Object.entries(roles)) {
+        const player = MATCH_PLAYERS.find(p => p.user_id === userId);
+        if (!player) continue;
+        const avatarEl = document.getElementById(`avatar-${role}`);
+        if (avatarEl) {
+            if (player.avatar_url) {
+                avatarEl.innerHTML = `<img src="${player.avatar_url}" alt="" class="w-full h-full object-cover">`;
+            } else {
+                avatarEl.textContent = player.username.charAt(0).toUpperCase();
+            }
+        }
+        const nameEl = document.getElementById(`name-${role}`);
+        if (nameEl) nameEl.textContent = player.username;
+        document.getElementById(`player-slot-${role}`)?.classList.remove("invisible");
+    }
+}
+
+function showMatchMessageBubble(data) {
+    const role = currentRoles[data.sender_id];
+    if (!role) return;
+    const bubble = document.getElementById(`msg-bubble-${role}`);
+    const textEl = document.getElementById(`msg-bubble-${role}-text`);
+    if (!bubble || !textEl) return;
+
+    textEl.textContent = data.content;
+
+    if (msgBubbleTimers[role]) {
+        clearTimeout(msgBubbleTimers[role]);
+        msgBubbleTimers[role] = null;
+    }
+
+    const wasHidden = bubble.classList.contains("hidden");
+    bubble.classList.remove("hidden");
+
+    if (typeof gsap !== "undefined") {
+        gsap.killTweensOf(bubble);
+        gsap.fromTo(
+            bubble,
+            { xPercent: -50, opacity: wasHidden ? 0 : 1, scale: wasHidden ? 0.82 : 1, y: wasHidden ? 10 : 0 },
+            { xPercent: -50, opacity: 1, scale: 1, y: 0, duration: 0.32, ease: "back.out(1.7)" }
+        );
+    } else {
+        gsap.set(bubble, { xPercent: -50 });
+    }
+
+    msgBubbleTimers[role] = setTimeout(() => {
+        msgBubbleTimers[role] = null;
+        if (typeof gsap !== "undefined") {
+            gsap.to(bubble, {
+                xPercent: -50, opacity: 0, scale: 0.88, y: 6, duration: 0.22, ease: "power2.in",
+                onComplete: () => bubble.classList.add("hidden"),
+            });
+        } else {
+            bubble.classList.add("hidden");
+        }
+    }, 4000);
+}
 
 // ── Board ─────────────────────────────────────────────────────────────────────
 
@@ -132,11 +202,11 @@ function updateTurnIndicator() {
     if (!el || !currentTurn || gameOver) { el?.classList.add("hidden"); return; }
     el.classList.remove("hidden");
     if (currentTurn === CURRENT_USER_ID) {
-        text.textContent = "Your turn";
+        text.textContent = t('match_your_turn');
         return;
     }
     const player = MATCH_PLAYERS.find(p => p.user_id === currentTurn);
-    text.textContent = `${player?.username || "Opponent"}'s turn`;
+    text.textContent = t('match_opponent_turn', { name: player?.username || '' });
 }
 
 // ── WS message handlers ───────────────────────────────────────────────────────
@@ -155,8 +225,8 @@ function getMatchPresenceLabel(userId) {
     if (!player || userId === CURRENT_USER_ID || !waitingOfflineCheckReady) {
         return "";
     }
-    if (!onlinePlayerIds.has(userId)) return `${player.username} is offline`;
-    if (!playingPlayerIds.has(userId)) return `${player.username} left`;
+    if (!onlinePlayerIds.has(userId)) return t('presence_offline', { name: player.username });
+    if (!playingPlayerIds.has(userId)) return t('presence_left', { name: player.username });
     return "";
 }
 
@@ -193,7 +263,7 @@ function updateWaitingOfflineLabel() {
     }
 
     const opponent = getOpponent();
-    label.textContent = `${opponent.username} is currently offline`;
+    label.textContent = t('presence_currently_offline', { name: opponent.username });
     label.classList.remove("hidden");
 }
 
@@ -251,6 +321,9 @@ function onBoardState(data) {
         clearWaitingOfflineTimer();
         myRole      = data.roles[CURRENT_USER_ID];
         currentTurn = data.current_turn;
+        const modal = document.getElementById("role-modal");
+        if (modal) modal.classList.add("hidden");
+        setupPlayerPanels(data.roles);
         buildBoard();
         restoreBoard();
         updateTurnIndicator();
@@ -285,6 +358,7 @@ function onGameStart(data) {
     const modal = document.getElementById("role-modal");
     if (modal) modal.classList.add("hidden");
 
+    setupPlayerPanels(data.roles);
     buildBoard();
     updateTurnIndicator();
 }
@@ -304,9 +378,9 @@ function onGameOver(data) {
     let message;
     if (data.result === "win") {
         const winner = MATCH_PLAYERS.find(p => p.user_id === data.winner_id);
-        message = winner ? `${winner.username} wins!` : "Winner!";
+        message = winner ? t('match_winner', { name: winner.username }) : t('match_winner_fallback');
     } else {
-        message = "Draw";
+        message = t('match_draw');
     }
 
     const overlay = document.getElementById("gameover-overlay");
@@ -322,44 +396,54 @@ function onGameOver(data) {
 
 // ── Role modal ────────────────────────────────────────────────────────────────
 
+let roleModalInitialised = false;
+
 function showRoleModal() {
     const modal = document.getElementById("role-modal");
     modal.classList.remove("hidden");
 
-    const orderedPlayers = [
-        ...MATCH_PLAYERS.filter(p => p.user_id !== CURRENT_USER_ID),
-        ...MATCH_PLAYERS.filter(p => p.user_id === CURRENT_USER_ID),
-    ];
+    if (!roleModalInitialised) {
+        const orderedPlayers = [
+            ...MATCH_PLAYERS.filter(p => p.user_id !== CURRENT_USER_ID),
+            ...MATCH_PLAYERS.filter(p => p.user_id === CURRENT_USER_ID),
+        ];
 
-    // Render both player avatars
-    document.getElementById("players-row").innerHTML = orderedPlayers.map((p, index) => `
-        <div class="flex flex-col items-center gap-2 w-28">
-            <div class="relative h-14 w-full">
-                <div id="bubble-${p.user_id}"
-                     data-bubble-side="${index === 0 ? "left" : "right"}"
-                     class="hidden absolute bottom-1 left-1/2
-                            min-w-max max-w-[10rem] whitespace-nowrap rounded-2xl bg-white px-3 py-2 text-center text-xs font-semibold
-                            text-gray-900 shadow-xl origin-bottom">
-                    <span id="bubble-text-${p.user_id}"></span>
-                    <span class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2
-                                 border-l-[7px] border-r-[7px] border-t-[8px]
-                                 border-l-transparent border-r-transparent border-t-white"></span>
+        document.getElementById("players-row").innerHTML = orderedPlayers.map((p, index) => `
+            <div class="flex flex-col items-center gap-2 w-28">
+                <div class="relative h-14 w-full">
+                    <div id="bubble-${p.user_id}"
+                         data-bubble-side="${index === 0 ? "left" : "right"}"
+                         class="hidden absolute bottom-1 left-1/2
+                                min-w-max max-w-[10rem] whitespace-nowrap rounded-2xl bg-white px-3 py-2 text-center text-xs font-semibold
+                                text-gray-900 shadow-xl origin-bottom">
+                        <span id="bubble-text-${p.user_id}"></span>
+                        <span class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2
+                                     border-l-[7px] border-r-[7px] border-t-[8px]
+                                     border-l-transparent border-r-transparent border-t-white"></span>
+                    </div>
                 </div>
+                ${p.avatar_url
+                    ? `<img src="${p.avatar_url}" alt=""
+                            class="w-14 h-14 rounded-full object-cover select-none">`
+                    : `<div class="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center
+                                  text-2xl font-bold select-none">
+                           ${p.username.charAt(0).toUpperCase()}
+                       </div>`
+                }
+                <span class="text-sm text-gray-300">${p.username}</span>
+                <span class="text-xs font-bold min-h-4" id="badge-${p.user_id}">-</span>
             </div>
-            <div class="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center
-                        text-2xl font-bold select-none">
-                ${p.username.charAt(0).toUpperCase()}
-            </div>
-            <span class="text-sm text-gray-300">${p.username}</span>
-            <span class="text-xs font-bold min-h-4" id="badge-${p.user_id}">-</span>
-        </div>
-    `).join("");
+        `).join("");
+
+        // Attach click listeners exactly once — re-calling showRoleModal must not stack them
+        document.querySelectorAll(".role-btn").forEach(btn => {
+            btn.addEventListener("click", () => selectRole(btn.dataset.role));
+        });
+
+        roleModalInitialised = true;
+    }
+
     updateMatchPresenceLabels();
-
-    document.querySelectorAll(".role-btn").forEach(btn => {
-        btn.addEventListener("click", () => selectRole(btn.dataset.role));
-    });
-
     updateModalSelections(pendingRoleSelections);
 }
 
@@ -368,7 +452,9 @@ const ROLE_STYLES = {
     o:      ["border-blue-500",   "text-blue-400"],
     random: ["border-emerald-500", "text-emerald-400"],
 };
-const ROLE_LABELS = { x: "I start", o: "You start", random: "Let's draw" };
+function getRoleBubbleText(role) {
+    return { x: t('role_i_start'), o: t('role_you_start'), random: t('role_lets_draw') }[role] || '';
+}
 const BADGE_LABELS = { x: "X", o: "O", random: "?" };
 
 function selectRole(role) {
@@ -459,15 +545,51 @@ function updateModalSelections(selections) {
 
         const bubble = document.getElementById(`bubble-${uid}`);
         const text = document.getElementById(`bubble-text-${uid}`);
-        if (bubble && text && ROLE_LABELS[role]) {
+        if (bubble && text && getRoleBubbleText(role)) {
             const wasHidden = bubble.classList.contains("hidden");
             const changed = bubble.dataset.role !== role;
-            text.textContent = ROLE_LABELS[role];
+            text.textContent = getRoleBubbleText(role);
             bubble.dataset.role = role;
             if (wasHidden || changed) showRoleBubble(bubble, wasHidden);
         }
     });
 }
+
+// ── Inline chat ──────────────────────────────────────────────────────────────
+
+function toggleEmojiPicker() {
+    const picker = document.getElementById("emoji-picker");
+    picker.classList.toggle("hidden");
+}
+
+function appendEmoji(emoji) {
+    const input = document.getElementById("match-chat-input");
+    input.value += emoji;
+    input.focus();
+}
+
+document.addEventListener("click", (e) => {
+    if (!e.target.closest("#emoji-btn") && !e.target.closest("#emoji-picker")) {
+        document.getElementById("emoji-picker")?.classList.add("hidden");
+    }
+});
+
+function sendMatchChatMessage() {
+    const opponent = MATCH_PLAYERS.find(p => p.user_id !== CURRENT_USER_ID);
+    if (!opponent) return;
+    const input = document.getElementById("match-chat-input");
+    const content = input.value.trim();
+    if (!content) return;
+    if (!matchWs || matchWs.readyState !== WebSocket.OPEN) return;
+    matchWs.send(JSON.stringify({ type: "send_message", receiver_id: opponent.user_id, content }));
+    input.value = "";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("match-chat-input").addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMatchChatMessage(); }
+    });
+});
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
 

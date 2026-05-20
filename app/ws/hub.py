@@ -24,7 +24,7 @@ async def hub_ws(
 
     user_id = str(user.id)
 
-    await manager.connect_hub(user_id, user.username, websocket)
+    await manager.connect_hub(user_id, user.username, websocket, avatar_url=user.avatar_url)
     await manager.broadcast_presence()
 
     # Send any pending invites the user may have missed while offline

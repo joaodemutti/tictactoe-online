@@ -9,15 +9,17 @@ class ConnectionManager:
         self.hub: dict[str, WebSocket] = {}        # user_id → WebSocket
         self.hub_users: dict[str, str] = {}        # user_id → username
         self.usernames: dict[str, str] = {}        # user_id → last known username
+        self.avatars: dict[str, str | None] = {}   # user_id → avatar_url
         self.matches: dict[str, dict[str, WebSocket]] = {}  # match_id → {user_id → ws}
 
     # ── Hub ──────────────────────────────────────────────────────────────────
 
-    async def connect_hub(self, user_id: str, username: str, ws: WebSocket) -> None:
+    async def connect_hub(self, user_id: str, username: str, ws: WebSocket, avatar_url: str | None = None) -> None:
         await ws.accept()
         self.hub[user_id] = ws
         self.hub_users[user_id] = username
         self.usernames[user_id] = username
+        self.avatars[user_id] = avatar_url
 
     def disconnect_hub(self, user_id: str, ws: WebSocket) -> None:
         # Guard: only remove if this is still the active connection for the user
@@ -25,7 +27,7 @@ class ConnectionManager:
             self.hub.pop(user_id)
             self.hub_users.pop(user_id, None)
 
-    def online_players_list(self) -> list[dict[str, str | bool]]:
+    def online_players_list(self) -> list[dict[str, str | bool | None]]:
         online_ids = set(self.hub_users)
         for room in self.matches.values():
             online_ids.update(room)
@@ -41,6 +43,7 @@ class ConnectionManager:
                 "user_id": uid,
                 "username": self.usernames.get(uid, self.hub_users.get(uid, "Player")),
                 "playing": uid in playing_ids,
+                "avatar_url": self.avatars.get(uid),
             }
             for uid in online_ids
         ]

@@ -30,10 +30,11 @@ async def get_contacts(
             )
             SELECT c.partner_id,
                    u.username,
+                   u.avatar_url,
                    COUNT(*) FILTER (WHERE c.sender_id != :uid AND c.read_at IS NULL) AS unread_count
             FROM convos c
             JOIN users u ON u.id = c.partner_id
-            GROUP BY c.partner_id, u.username
+            GROUP BY c.partner_id, u.username, u.avatar_url
         """).bindparams(bindparam("uid", type_=PGUUID(as_uuid=True))),
         {"uid": user.id},
     )
@@ -42,6 +43,7 @@ async def get_contacts(
         {
             "user_id":      str(r["partner_id"]),
             "username":     r["username"],
+            "avatar_url":   r["avatar_url"],
             "unread_count": int(r["unread_count"]),
         }
         for r in rows
