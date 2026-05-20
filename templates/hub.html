@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Hub — Tic-Tac-Toe{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-10">
+    <div class="flex items-center justify-between mb-10">
+        <h1 class="text-2xl font-bold tracking-tight">Online Players</h1>
+    </div>
+
+    <div id="players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <p class="col-span-full text-center text-gray-600 py-16">Connecting...</p>
+    </div>
+</div>
+
+<div id="invites-container"
+     class="fixed top-24 right-4 flex flex-col gap-2 z-40 w-72"></div>
+
+<div id="profile-modal"
+     class="hidden fixed inset-0 z-[60] bg-gray-950/90 backdrop-blur-sm px-4">
+    <div class="min-h-full flex items-center justify-center">
+        <div class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-white">Your Account</h2>
+                <button type="button" onclick="closeProfileModal()"
+                        class="text-gray-400 hover:text-white transition-colors">Close</button>
+            </div>
+
+            <form id="profile-form" class="space-y-4">
+                <div>
+                    <label for="profile-username" class="block text-sm text-gray-400 mb-2">Username</label>
+                    <input id="profile-username" type="text"
+                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label for="profile-email" class="block text-sm text-gray-400 mb-2">Email</label>
+                    <input id="profile-email" type="email"
+                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label for="profile-password" class="block text-sm text-gray-400 mb-2">New password</label>
+                    <input id="profile-password" type="password" placeholder="Leave blank to keep current password"
+                           class="w-full bg-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-sky-500">
+                </div>
+                <p id="profile-feedback" class="min-h-5 text-sm text-gray-500"></p>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                            class="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500 transition-colors">
+                        Save
+                    </button>
+                    <button type="button" onclick="signOut()"
+                            class="flex-1 rounded-xl border border-red-700 px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-950/50 transition-colors">
+                        Sign out
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const CURRENT_USER_ID = {{ user.id | tojson }};
+    const CURRENT_USERNAME = {{ user.username | tojson }};
+    const CURRENT_EMAIL = {{ user.email | tojson }};
+</script>
+<script src="/static/js/hub.js"></script>
+{% endblock %}

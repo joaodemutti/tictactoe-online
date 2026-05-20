@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Match - Tic-Tac-Toe{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col">
+    <a href="/"
+       class="fixed left-6 top-5 z-40 text-base font-semibold text-gray-400 hover:text-white transition-colors">
+        &larr; Back to Hub
+    </a>
+
+    <main class="relative flex-1 flex flex-col items-center justify-center gap-6 py-8">
+        <div id="waiting-status" class="absolute inset-0 z-10 backdrop-blur-sm flex flex-col items-center justify-center text-center">
+            <div class="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full
+                        animate-spin mx-auto mb-4"></div>
+            <p class="text-xl font-semibold text-white">Waiting for player...</p>
+            <p class="text-sm text-gray-500 mt-2">Both players must be on this page to start</p>
+            <p id="waiting-offline-label" class="hidden text-sm text-amber-400 mt-4"></p>
+        </div>
+
+        <p id="match-status-label" class="hidden text-sm font-semibold text-amber-400"></p>
+
+        <div id="turn-indicator" class="text-sm font-medium text-gray-400 hidden">
+            <span id="turn-text"></span>
+        </div>
+
+        <!-- 3x3 board - cells injected by JS -->
+        <div id="board" class="grid grid-cols-3 w-72 h-72 sm:w-96 sm:h-96"></div>
+    </main>
+</div>
+
+<!-- Role selection modal - shown once when both players first arrive -->
+<div id="role-modal"
+     class="fixed inset-0 flex items-center justify-center z-30 hidden pointer-events-none">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm mx-4 pointer-events-auto">
+
+        <h2 class="text-xl font-bold text-center text-white">Who is Who</h2>
+        <p id="role-status-label" class="hidden mt-2 mb-3 text-center text-sm font-semibold text-amber-400"></p>
+
+        <!-- Both player avatars with their live selections -->
+        <div class="flex justify-around mb-7 mt-3" id="players-row"></div>
+
+        <h2 class="text-xl font-bold text-center text-white mb-6">Who will you be?</h2>
+
+        <!-- Role buttons: X / ? / O -->
+        <div class="flex gap-3 justify-center mb-3" id="role-buttons">
+            <button data-role="x"
+                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+                           font-bold text-lg hover:border-red-500 hover:text-red-400 transition-colors">
+                X
+            </button>
+            <button data-role="random"
+                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+                           font-bold text-lg hover:border-emerald-500 hover:text-emerald-400 transition-colors">
+                ?
+            </button>
+            <button data-role="o"
+                    class="role-btn flex-1 py-3 rounded-xl border-2 border-gray-700 text-white
+                           font-bold text-lg hover:border-blue-500 hover:text-blue-400 transition-colors">
+                O
+            </button>
+        </div>
+
+        <!-- Countdown - hidden until a selection is made -->
+        <div id="countdown-wrap" class="hidden mt-6 text-center">
+            <p class="text-xs text-gray-500 mb-1 uppercase tracking-widest">Starting in</p>
+            <p id="countdown-num" class="text-5xl font-bold text-white tabular-nums">5</p>
+        </div>
+    </div>
+</div>
+
+<!-- Game over overlay - shown on win or draw, auto-redirects to hub -->
+<div id="gameover-overlay"
+     class="fixed inset-0 bg-gray-950/90 backdrop-blur-sm flex flex-col items-center
+            justify-center z-40 hidden">
+    <p id="gameover-text" class="text-5xl font-bold text-white mb-4"></p>
+    <p class="text-sm text-gray-500">Returning to hub...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const CURRENT_USER_ID = {{ user.id | tojson }};
+    const CURRENT_USERNAME = {{ user.username | tojson }};
+    const MATCH_ID = {{ match_id | tojson }};
+    const MATCH_PLAYERS = {{ players | tojson }};
+    window.CHAT_CONTACTS = MATCH_PLAYERS.filter(p => p.user_id !== CURRENT_USER_ID);
+</script>
+<script src="/static/js/match.js"></script>
+{% endblock %}

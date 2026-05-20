@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tic-Tac-Toe{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+
+<body class="bg-gray-950 text-white min-h-screen">
+
+    {% block content %}{% endblock %}
+
+    <!-- ── FAB group (bell + chat) ──────────────────────────────────────────── -->
+    <div class="fixed top-6 right-6 z-50 flex items-center gap-2">
+
+        <!-- Bell / mute toggle -->
+        <button id="sound-toggle" onclick="toggleNotificationSound()" title="Toggle notification sounds" class="w-11 h-11 bg-gray-700 hover:bg-gray-600 rounded-full
+                       flex items-center justify-center shadow-lg transition-colors">
+            <!-- Bell on -->
+            <svg id="bell-on" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0
+                         00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0
+                         .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <!-- Bell off (muted) -->
+            <svg id="bell-off" class="w-5 h-5 text-gray-400 hidden" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 9.172A6 6 0 006 14.158V17H4l1.405-1.405A2.032 2.032 0
+                         005 14.159V11c0-1.306.418-2.51 1.121-3.486M15 17v1a3 3 0
+                         01-5.995.176M15 17H9M3 3l18 18" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.083 5.083A6 6 0 0118 11v3.159c0 .538.214 1.055.595
+                         1.436L20 17h-2" />
+            </svg>
+        </button>
+
+        <!-- Chat toggle -->
+        <button id="drawer-toggle" onclick="toggleDrawer()" class="relative w-14 h-14 bg-indigo-600 hover:bg-indigo-500
+                       rounded-full flex items-center justify-center shadow-xl transition-colors">
+            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8
+                         a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042
+                         3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <span id="drawer-badge" class="hidden absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500
+                         rounded-full text-xs flex items-center justify-center font-bold
+                         leading-none pointer-events-none">0</span>
+        </button>
+
+    </div>
+
+    <!-- ── Chat drawer ───────────────────────────────────────────────────────── -->
+    <div id="chat-drawer" class="fixed right-0 top-0 h-full w-80 bg-gray-900 border-l border-gray-800
+                z-50 flex flex-col hidden">
+
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-4 py-4 border-b border-gray-800 shrink-0">
+            <button id="drawer-back" onclick="showContactsView()"
+                class="hidden text-gray-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span id="drawer-title" class="flex-1 font-semibold text-white">Messages</span>
+            <button onclick="closeDrawer()" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Contacts view -->
+        <div id="contacts-view" class="flex-1 overflow-y-auto">
+            <div id="contacts-list"></div>
+            <p id="no-contacts" class="hidden text-center text-sm text-gray-600 py-12 px-4">
+                No messages yet. Challenge someone to a game!
+            </p>
+        </div>
+
+        <!-- Thread view -->
+        <div id="thread-view" class="hidden relative flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div id="thread-messages" class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 flex flex-col gap-1">
+            </div>
+            <div id="thread-invite-slot"
+                class="pointer-events-none absolute left-0 right-0 bottom-[4.35rem] z-0 flex justify-center px-5">
+                <button id="thread-invite-btn" type="button" onclick="sendThreadInvite()" class="hidden pointer-events-auto w-36 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 rounded-lg
+                               text-xs font-semibold shadow-lg shadow-sky-950/40 transition-colors">
+                    Invite to game
+                </button>
+            </div>
+            <div class="relative z-10 flex gap-2 px-3 pt-3 pb-3 border-t border-gray-800 bg-gray-900 shrink-0">
+                <input id="chat-input" type="text" placeholder="Message…" class="flex-1 bg-gray-800 rounded-xl px-4 py-2 text-sm text-white
+                              placeholder-gray-500 outline-none focus:ring-1 focus:ring-indigo-500">
+                <button onclick="sendChatMessage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl
+                               text-sm font-semibold transition-colors shrink-0">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message bubble template -->
+    <template id="message-template">
+        <div class="msg-row flex mb-1 min-w-0">
+            <div
+                class="msg-bubble rounded-2xl px-4 py-2 max-w-[85%] min-w-0 text-sm break-words [overflow-wrap:anywhere]">
+            </div>
+        </div>
+    </template>
+
+    <!-- Invite card template -->
+    <template id="invite-template">
+        <div class="flex flex-col items-center my-3 gap-2 px-2">
+            <p class="text-xs text-gray-500">Invited you to a game</p>
+            <a class="invite-join w-full text-center py-2 bg-indigo-600 hover:bg-indigo-500
+                      rounded-xl text-sm font-semibold transition-colors cursor-pointer">
+                Join game
+            </a>
+        </div>
+    </template>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Drawer JS runs after block scripts so CURRENT_USER_ID is defined -->
+    <script>
+        // ── State ─────────────────────────────────────────────────────────────
+
+        let drawerOpen = false;
+        let activeContact = null;    // {user_id, username}
+        const contactUnread = {};    // user_id → unread count
+        const contactNames = {};    // user_id → username
+        const contactInvites = {};   // user_id → invite payloads
+        const contactPresence = {};
+        const contactOfflineTimers = {};
+        let notificationAudioCtx = null;
+        let soundMuted = false;
+
+        function toggleNotificationSound() {
+            soundMuted = !soundMuted;
+            document.getElementById('bell-on').classList.toggle('hidden', soundMuted);
+            document.getElementById('bell-off').classList.toggle('hidden', !soundMuted);
+        }
+
+        function getActiveWs() {
+            if (typeof hubWs !== 'undefined' && hubWs && hubWs.readyState === WebSocket.OPEN) return hubWs;
+            if (typeof matchWs !== 'undefined' && matchWs && matchWs.readyState === WebSocket.OPEN) return matchWs;
+            return null;
+        }
+
+        function ensureNotificationAudio() {
+            if (notificationAudioCtx) return notificationAudioCtx;
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return null;
+            notificationAudioCtx = new AudioCtx();
+            return notificationAudioCtx;
+        }
+
+        function primeNotificationAudio() {
+            const ctx = ensureNotificationAudio();
+            if (!ctx) return;
+            const unlock = () => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                gain.gain.value = 0.0001;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.01);
+            };
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(unlock).catch(() => { });
+            } else {
+                unlock();
+            }
+        }
+
+        function playNotificationSound() {
+            if (soundMuted) return;
+            const ctx = ensureNotificationAudio();
+            if (!ctx) return;
+            if (ctx.state === 'suspended') {
+                ctx.resume()
+                    .then(() => {
+                        if (ctx.state === 'running') playNotificationChime(ctx);
+                    })
+                    .catch(() => { });
+                return;
+            }
+            playNotificationChime(ctx);
+        }
+
+        function playNotificationChime(ctx) {
+            const playTone = (start, freq, duration, peak) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, start);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.985, start + duration);
+
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.linearRampToValueAtTime(peak, start + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + duration + 0.02);
+            };
+
+            const now = ctx.currentTime;
+            playTone(now, 659.25, 0.16, 0.12);
+            playTone(now + 0.09, 987.77, 0.22, 0.09);
+        }
+
+        // ── Contacts ──────────────────────────────────────────────────────────
+
+        async function loadContacts() {
+            try {
+                const res = await fetch('/messages/contacts');
+                if (res.ok) {
+                    const list = await res.json();
+                    list.forEach(c => {
+                        contactUnread[c.user_id] = c.unread_count;
+                        contactNames[c.user_id] = c.username;
+                        upsertContact(c);
+                    });
+                }
+            } catch (_) { }
+            seedContactsFromContext();
+            if (document.getElementById('contacts-list').children.length === 0) {
+                document.getElementById('no-contacts').classList.remove('hidden');
+            }
+            updateTotalBadge();
+        }
+
+        function seedContactsFromContext() {
+            if (!Array.isArray(window.CHAT_CONTACTS)) return;
+            window.CHAT_CONTACTS.forEach(c => {
+                if (!c || !c.user_id || !c.username) return;
+                contactUnread[c.user_id] = contactUnread[c.user_id] || 0;
+                contactNames[c.user_id] = c.username;
+                upsertContact({ user_id: c.user_id, username: c.username });
+            });
+        }
+
+        function getPresenceMeta(userId) {
+            const presence = contactPresence[userId];
+            if (presence?.playing) {
+                return { label: 'Playing', dot: 'bg-amber-400', badge: 'border-amber-700 text-amber-300' };
+            }
+            if (presence?.online) {
+                return { label: 'Online', dot: 'bg-emerald-400', badge: 'border-emerald-700 text-emerald-300' };
+            }
+            return { label: 'Offline', dot: 'bg-gray-600', badge: 'border-gray-700 text-gray-500' };
+        }
+
+        function updateDrawerTitle() {
+            const title = document.getElementById('drawer-title');
+            if (!title) return;
+            if (!activeContact) {
+                title.textContent = 'Messages';
+                return;
+            }
+            const meta = getPresenceMeta(activeContact.user_id);
+            title.innerHTML = `
+                <span class="flex min-w-0 items-center gap-2">
+                    <span class="truncate">${activeContact.username}</span>
+                    <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${meta.badge}">
+                        <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>
+                        ${meta.label}
+                    </span>
+                </span>
+            `;
+        }
+
+        function updateChatPresence(players) {
+            (players || []).forEach(player => {
+                if (!player?.user_id) return;
+                contactPresence[player.user_id] = {
+                    online: true,
+                    playing: Boolean(player.playing),
+                    username: player.username,
+                };
+                if (player.username) contactNames[player.user_id] = player.username;
+            });
+
+            Object.entries(contactNames).forEach(([userId, username]) => {
+                if (userId !== String(CURRENT_USER_ID)) {
+                    upsertContact({ user_id: userId, username });
+                }
+            });
+            updateDrawerTitle();
+        }
+
+        function applyPresenceSnapshot(players, onChange) {
+            const nowPresent = new Map();
+            (players || []).forEach(player => {
+                if (player?.user_id) nowPresent.set(player.user_id, player);
+            });
+
+            Object.keys(contactPresence).forEach(userId => {
+                if (nowPresent.has(userId) || contactOfflineTimers[userId]) return;
+                contactOfflineTimers[userId] = setTimeout(() => {
+                    if (!contactPresence[userId]) return;
+                    contactPresence[userId] = { online: false, playing: false };
+                    delete contactOfflineTimers[userId];
+                    updateChatPresence(getStablePresencePlayers());
+                    if (typeof onChange === 'function') onChange(getStablePresencePlayers());
+                }, 5000);
+            });
+
+            nowPresent.forEach((player, userId) => {
+                if (contactOfflineTimers[userId]) {
+                    clearTimeout(contactOfflineTimers[userId]);
+                    delete contactOfflineTimers[userId];
+                }
+                contactPresence[userId] = {
+                    online: true,
+                    playing: Boolean(player.playing),
+                    username: player.username,
+                };
+                if (player.username) contactNames[userId] = player.username;
+            });
+
+            const stablePlayers = getStablePresencePlayers();
+            updateChatPresence(stablePlayers);
+            if (typeof onChange === 'function') onChange(stablePlayers);
+        }
+
+        function getStablePresencePlayers() {
+            return Object.entries(contactPresence)
+                .filter(([, presence]) => presence.online)
+                .map(([userId, presence]) => ({
+                    user_id: userId,
+                    username: presence.username || contactNames[userId] || 'Player',
+                    playing: Boolean(presence.playing),
+                }));
+        }
+
+        function upsertContact(c) {
+            const list = document.getElementById('contacts-list');
+            document.getElementById('no-contacts').classList.add('hidden');
+            let el = document.getElementById(`contact-${c.user_id}`);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = `contact-${c.user_id}`;
+                el.className = 'flex items-center gap-3 px-4 py-3 hover:bg-gray-800 cursor-pointer transition-colors';
+                el.addEventListener('click', () => openThread(c.user_id, contactNames[c.user_id] || c.username));
+                list.prepend(el);
+            }
+            contactNames[c.user_id] = c.username;
+            const unread = contactUnread[c.user_id] || 0;
+            const presence = getPresenceMeta(c.user_id);
+            el.innerHTML = `
+                <div class="relative w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center
+                            text-lg font-bold shrink-0 select-none">
+                    ${c.username.charAt(0).toUpperCase()}
+                    <span class="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-gray-900 ${presence.dot}"></span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-medium">${c.username}</div>
+                    <div class="mt-0.5 text-[11px] leading-none ${presence.badge.split(' ').find(c => c.startsWith('text-'))}">
+                        ${presence.label}
+                    </div>
+                </div>
+                ${unread > 0
+                    ? `<span class="min-w-5 h-5 px-1 bg-red-500 rounded-full text-xs
+                                   flex items-center justify-center font-bold leading-none">
+                           ${unread > 99 ? '99+' : unread}
+                       </span>`
+                    : ''}
+            `;
+        }
+
+        function updateTotalBadge() {
+            const total = Object.values(contactUnread).reduce((s, n) => s + n, 0);
+            const badge = document.getElementById('drawer-badge');
+            if (total > 0) {
+                badge.textContent = total > 99 ? '99+' : String(total);
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // ── Drawer open / close ───────────────────────────────────────────────
+
+        function dismissInviteLocally(matchId) {
+            Object.keys(contactInvites).forEach(userId => {
+                const hasInvite = contactInvites[userId].some(invite => invite.match_id === matchId);
+                if (hasInvite && contactUnread[userId] > 0) {
+                    contactUnread[userId] -= 1;
+                    upsertContact({ user_id: userId, username: contactNames[userId] || 'Player' });
+                }
+            });
+            updateTotalBadge();
+            updateThreadInviteButton();
+        }
+
+        function toggleDrawer() {
+            if (drawerOpen) closeDrawer(); else openDrawer();
+        }
+
+        function openDrawer() {
+            drawerOpen = true;
+            const drawer = document.getElementById('chat-drawer');
+            gsap.set(drawer, { x: '100%' });
+            drawer.classList.remove('hidden');
+            gsap.to(drawer, { x: 0, duration: 0.3, ease: 'power2.out' });
+        }
+
+        function closeDrawer() {
+            drawerOpen = false;
+            const drawer = document.getElementById('chat-drawer');
+            gsap.to(drawer, {
+                x: '100%', duration: 0.25, ease: 'power2.in',
+                onComplete: () => drawer.classList.add('hidden'),
+            });
+        }
+
+        function showContactsView() {
+            activeContact = null;
+            document.getElementById('contacts-view').classList.remove('hidden');
+            document.getElementById('thread-view').classList.add('hidden');
+            updateDrawerTitle();
+            document.getElementById('drawer-back').classList.add('hidden');
+            updateThreadInviteButton();
+        }
+
+        // ── Thread ────────────────────────────────────────────────────────────
+
+        async function openThread(userId, username) {
+            activeContact = { user_id: userId, username };
+            contactNames[userId] = username;
+
+            contactUnread[userId] = 0;
+            upsertContact({ user_id: userId, username });
+            updateTotalBadge();
+
+            document.getElementById('contacts-view').classList.add('hidden');
+            document.getElementById('thread-view').classList.remove('hidden');
+            updateDrawerTitle();
+            document.getElementById('drawer-back').classList.remove('hidden');
+
+            const thread = document.getElementById('thread-messages');
+            thread.innerHTML = '';
+
+            let threadGames = [];
+            try {
+                const res = await fetch(`/messages/${userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const msgs = Array.isArray(data) ? data : (data.messages || []);
+                    const invites = Array.isArray(data?.invites) ? data.invites : [];
+                    threadGames = Array.isArray(data?.games) ? data.games : [];
+                    contactInvites[userId] = invites.map(invite => ({
+                        ...invite,
+                        from_user_id: invite.from_user_id || userId,
+                        from_username: invite.from_username || username,
+                    }));
+                    const items = [
+                        ...msgs.map(m => ({ ...m, _type: 'message' })),
+                        ...threadGames.map(g => ({ ...g, _type: 'game' })),
+                    ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    items.forEach(item => {
+                        if (item._type === 'message') appendMessage(item.sender_id, item.content, false);
+                        else appendGameResult(item, false);
+                    });
+                }
+            } catch (_) { }
+            renderInviteCards(userId, false);
+            appendGameSummary(threadGames);
+            updateThreadInviteButton();
+
+            requestAnimationFrame(scrollThreadToBottom);
+
+            const ws = getActiveWs();
+            if (ws) ws.send(JSON.stringify({ type: 'mark_read', sender_id: userId }));
+        }
+
+        function appendMessage(senderId, content, animate = true) {
+            const thread = document.getElementById('thread-messages');
+            const isMine = senderId === CURRENT_USER_ID;
+            const tmpl = document.getElementById('message-template');
+            const row = tmpl.content.cloneNode(true).querySelector('.msg-row');
+            const bubble = row.querySelector('.msg-bubble');
+
+            row.classList.add(isMine ? 'justify-end' : 'justify-start');
+            bubble.textContent = content;
+            bubble.classList.add(
+                isMine ? 'bg-indigo-600' : 'bg-gray-700',
+                isMine ? 'text-white' : 'text-gray-100',
+            );
+
+            thread.appendChild(row);
+            thread.scrollTop = thread.scrollHeight;
+
+            if (animate) {
+                gsap.from(row, { x: isMine ? 40 : -40, opacity: 0, duration: 0.4, ease: 'back.out(1.7)' });
+            }
+        }
+
+        function appendGameResult(game, animate = true) {
+            const thread = document.getElementById('thread-messages');
+            const el = document.createElement('div');
+            el.className = 'flex justify-center my-2';
+
+            let label, color;
+            if (!game.winner_id) {
+                label = 'Draw'; color = 'text-gray-400';
+            } else if (game.winner_id === String(CURRENT_USER_ID)) {
+                label = 'Won'; color = 'text-emerald-400';
+            } else {
+                label = 'Lost'; color = 'text-red-400';
+            }
+
+            const role = game.my_role
+                ? `<span class="text-gray-500">· ${game.my_role.toUpperCase()}</span>`
+                : '';
+
+            el.innerHTML = `
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-800
+                            rounded-full border border-gray-700 text-xs select-none">
+                    <span class="font-semibold ${color}">${label}</span>
+                    ${role}
+                </div>
+            `;
+
+            thread.appendChild(el);
+            if (animate) {
+                gsap.from(el, { y: 10, opacity: 0, duration: 0.3, ease: 'power2.out' });
+            }
+        }
+
+        function appendGameSummary(games) {
+            if (!games.length) return;
+            const thread = document.getElementById('thread-messages');
+            let wins = 0, losses = 0, draws = 0;
+            games.forEach(g => {
+                if (!g.winner_id) draws++;
+                else if (g.winner_id === String(CURRENT_USER_ID)) wins++;
+                else losses++;
+            });
+            const parts = [];
+            if (wins) parts.push(`${wins} ${wins === 1 ? 'win' : 'wins'}`);
+            if (losses) parts.push(`${losses} ${losses === 1 ? 'loss' : 'losses'}`);
+            if (draws) parts.push(`${draws} ${draws === 1 ? 'draw' : 'draws'}`);
+            const el = document.createElement('div');
+            el.id = 'game-summary';
+            el.className = 'flex justify-center mt-3 mb-1';
+            el.innerHTML = `
+                <span class="text-[11px] text-gray-600 select-none">${parts.join(' · ')}</span>
+            `;
+            thread.appendChild(el);
+        }
+
+        function appendInviteCard(invite, userId, animate = true) {
+            const thread = document.getElementById('thread-messages');
+            const isMine = invite.from_user_id === CURRENT_USER_ID;
+            const tmpl = document.getElementById('invite-template');
+            const el = tmpl.content.cloneNode(true).firstElementChild;
+            el.id = `invite-${invite.match_id}`;
+            if (isMine) {
+                el.innerHTML = `
+                    <p class="text-xs text-gray-500">
+                        You invited ${contactNames[userId] || activeContact?.username || 'this player'} to a game
+                    </p>
+                `;
+            } else {
+                el.querySelector('.invite-join').href = `/match/${invite.match_id}`;
+            }
+            thread.appendChild(el);
+            thread.scrollTop = thread.scrollHeight;
+            if (animate) {
+                gsap.from(el, { y: 20, opacity: 0, duration: 0.4, ease: 'back.out(1.7)' });
+            }
+        }
+
+        function isCurrentMatchInvite(invite) {
+            return typeof MATCH_ID !== 'undefined' && invite?.match_id === MATCH_ID;
+        }
+
+        function isCurrentMatchContact(userId) {
+            return typeof MATCH_PLAYERS !== 'undefined'
+                && typeof MATCH_ID !== 'undefined'
+                && Array.isArray(MATCH_PLAYERS)
+                && MATCH_PLAYERS.some(p => p.user_id === userId);
+        }
+
+        function visibleInvitesFor(userId) {
+            return (contactInvites[userId] || []).filter(invite => !isCurrentMatchInvite(invite));
+        }
+
+        function renderInviteCards(userId, animate = true) {
+            visibleInvitesFor(userId).forEach(invite => {
+                if (document.getElementById(`invite-${invite.match_id}`)) return;
+                appendInviteCard(invite, userId, animate);
+            });
+        }
+
+        function showThreadInviteButton(btn) {
+            if (btn.dataset.visible === 'true') return;
+            btn.dataset.visible = 'true';
+            btn.classList.remove('hidden');
+            document.getElementById('thread-messages')?.classList.add('pb-14');
+
+            if (typeof gsap === 'undefined') return;
+            gsap.killTweensOf(btn);
+            gsap.fromTo(
+                btn,
+                { y: 48, opacity: 0, scale: 0.96 },
+                { y: 0, opacity: 1, scale: 1, duration: 0.32, ease: 'back.out(1.35)' },
+            );
+        }
+
+        function hideThreadInviteButton(btn) {
+            if (btn.dataset.visible !== 'true') {
+                btn.classList.add('hidden');
+                document.getElementById('thread-messages')?.classList.remove('pb-14');
+                return;
+            }
+            btn.dataset.visible = 'false';
+
+            if (typeof gsap === 'undefined') {
+                btn.classList.add('hidden');
+                document.getElementById('thread-messages')?.classList.remove('pb-14');
+                return;
+            }
+
+            gsap.killTweensOf(btn);
+            gsap.to(btn, {
+                y: 48,
+                opacity: 0,
+                scale: 0.96,
+                duration: 0.24,
+                ease: 'power2.in',
+                onComplete: () => {
+                    btn.classList.add('hidden');
+                    document.getElementById('thread-messages')?.classList.remove('pb-14');
+                },
+            });
+        }
+
+        function updateThreadInviteButton() {
+            const btn = document.getElementById('thread-invite-btn');
+            if (!btn) return;
+            if (!activeContact || activeContact.user_id === CURRENT_USER_ID) {
+                hideThreadInviteButton(btn);
+                requestAnimationFrame(scrollThreadToBottom);
+                return;
+            }
+            if (isCurrentMatchContact(activeContact.user_id)) {
+                hideThreadInviteButton(btn);
+                requestAnimationFrame(scrollThreadToBottom);
+                return;
+            }
+            const hasInvite = visibleInvitesFor(activeContact.user_id).length > 0;
+            if (hasInvite) {
+                hideThreadInviteButton(btn);
+            } else {
+                showThreadInviteButton(btn);
+            }
+            requestAnimationFrame(scrollThreadToBottom);
+        }
+
+        function scrollThreadToBottom() {
+            const thread = document.getElementById('thread-messages');
+            if (thread) thread.scrollTop = thread.scrollHeight;
+        }
+
+        async function sendThreadInvite() {
+            if (!activeContact || activeContact.user_id === CURRENT_USER_ID) return;
+            const res = await fetch('/match/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_user_id: activeContact.user_id }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.match_id) return;
+
+            contactInvites[activeContact.user_id] ||= [];
+            if (!contactInvites[activeContact.user_id].some(invite => invite.match_id === data.match_id)) {
+                contactInvites[activeContact.user_id].push({
+                    match_id: data.match_id,
+                    from_user_id: data.from_user_id || CURRENT_USER_ID,
+                    from_username: data.from_user_id && data.from_user_id !== CURRENT_USER_ID
+                        ? activeContact.username
+                        : CURRENT_USERNAME,
+                });
+            }
+            renderInviteCards(activeContact.user_id);
+            updateThreadInviteButton();
+            location.href = `/match/${data.match_id}`;
+        }
+
+        function sendChatMessage() {
+            if (!activeContact) return;
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            if (!content) return;
+            const ws = getActiveWs();
+            if (!ws) return;
+            ws.send(JSON.stringify({ type: 'send_message', receiver_id: activeContact.user_id, content }));
+            input.value = '';
+        }
+
+        // ── WS handlers (called from hub.js / match.js) ───────────────────────
+
+        function onNewMessage(data) {
+            const isFromMe = data.sender_id === CURRENT_USER_ID;
+            const otherId = isFromMe ? data.receiver_id : data.sender_id;
+            const otherName = isFromMe ? data.receiver_username : data.sender_username;
+
+            contactNames[otherId] = otherName;
+            if (!isFromMe) playNotificationSound();
+
+            if (activeContact && activeContact.user_id === otherId && drawerOpen) {
+                appendMessage(data.sender_id, data.content);
+                if (!isFromMe) {
+                    const ws = getActiveWs();
+                    if (ws) ws.send(JSON.stringify({ type: 'mark_read', sender_id: data.sender_id }));
+                }
+            } else if (!isFromMe) {
+                contactUnread[otherId] = (contactUnread[otherId] || 0) + 1;
+            }
+
+            upsertContact({ user_id: otherId, username: otherName });
+            updateTotalBadge();
+        }
+
+        function onMessageRead(_data) {
+            // Sender's messages were read — no visual update needed on sender side
+        }
+
+        function onInviteReceived(data, playSound = true) {
+            const userId = data.from_user_id;
+            const username = data.from_username;
+            if (isCurrentMatchInvite(data)) {
+                contactNames[userId] = username;
+                contactInvites[userId] ||= [];
+                if (!contactInvites[userId].some(invite => invite.match_id === data.match_id)) {
+                    contactInvites[userId].push(data);
+                }
+                updateThreadInviteButton();
+                return;
+            }
+            if (playSound) playNotificationSound();
+
+            contactNames[userId] = username;
+            contactInvites[userId] ||= [];
+            if (!contactInvites[userId].some(invite => invite.match_id === data.match_id)) {
+                contactInvites[userId].push(data);
+            }
+
+            upsertContact({ user_id: userId, username });
+
+            if (activeContact && drawerOpen && activeContact.user_id === userId) {
+                renderInviteCards(userId);
+            } else {
+                contactUnread[userId] = (contactUnread[userId] || 0) + 1;
+            }
+
+            upsertContact({ user_id: userId, username });
+            updateTotalBadge();
+            updateThreadInviteButton();
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadContacts();
+            document.addEventListener('pointerdown', primeNotificationAudio, { once: true });
+            document.addEventListener('keydown', primeNotificationAudio, { once: true });
+            document.getElementById('chat-input').addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+            });
+        });
+    </script>
+</body>
+
+</html>
