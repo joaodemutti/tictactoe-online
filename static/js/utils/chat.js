@@ -49,12 +49,12 @@ function seedContactsFromContext() {
 function getPresenceMeta(userId) {
     const presence = contactPresence[userId];
     if (presence?.playing) {
-        return { label: t('chat_presence_playing'), dot: 'bg-amber-400', badge: 'border-amber-700 text-amber-300' };
+        return { label: t('chat_presence_playing'), dot: 'bg-amber-400', badge: 'border-amber-700 text-amber-300', textColor: 'text-amber-300' };
     }
     if (presence?.online) {
-        return { label: t('chat_presence_online'), dot: 'bg-emerald-400', badge: 'border-emerald-700 text-emerald-300' };
+        return { label: t('chat_presence_online'), dot: 'bg-emerald-400', badge: 'border-emerald-700 text-emerald-300', textColor: 'text-emerald-300' };
     }
-    return { label: t('chat_presence_offline'), dot: 'bg-gray-600', badge: 'border-gray-700 text-gray-500' };
+    return { label: t('chat_presence_offline'), dot: 'bg-gray-600', badge: 'border-gray-700 text-gray-500', textColor: 'text-gray-500' };
 }
 
 function updateDrawerTitle() {
@@ -167,7 +167,7 @@ function upsertContact(c) {
         ${contactAvatarHtml(c.user_id, c.username, presence.dot)}
         <div class="min-w-0 flex-1">
             <div class="truncate text-sm font-medium">${c.username}</div>
-            <div class="mt-0.5 text-[11px] leading-none ${presence.badge.split(' ').find(c => c.startsWith('text-'))}">
+            <div class="mt-0.5 text-[11px] leading-none ${presence.textColor}">
                 ${presence.label}
             </div>
         </div>

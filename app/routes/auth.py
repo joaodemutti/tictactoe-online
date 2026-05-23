@@ -80,16 +80,12 @@ async def signup(
         try:
             data = await avatar.read()
             if data and len(data) <= 5 * 1024 * 1024:
-                img = Image.open(io.BytesIO(data)).convert("RGB")
-                w, h = img.size
-                side = min(w, h)
-                img = img.crop(((w - side) // 2, (h - side) // 2,
-                                (w + side) // 2, (h + side) // 2))
-                img = img.resize(_AVATAR_SIZE, Image.LANCZOS)
-                _AVATARS_DIR.mkdir(parents=True, exist_ok=True)
-                img.save(_AVATARS_DIR / f"{user.id}.webp", format="WEBP", quality=85)
-                user.avatar_url = f"/static/avatars/{user.id}.webp?t={int(time.time())}"
-                await db.commit()
+                img = _process_avatar(data)
+                if img:
+                    _AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+                    img.save(_AVATARS_DIR / f"{user.id}.webp", format="WEBP", quality=85)
+                    user.avatar_url = f"/static/avatars/{user.id}.webp?t={int(time.time())}"
+                    await db.commit()
         except Exception:
             pass  # avatar is optional — don't block signup on image errors
 
@@ -205,6 +201,17 @@ _AVATARS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "static" 
 _AVATAR_SIZE = (128, 128)
 
 
+def _process_avatar(data: bytes) -> "Image.Image | None":
+    try:
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+    except Exception:
+        return None
+    w, h = img.size
+    side = min(w, h)
+    img = img.crop(((w - side) // 2, (h - side) // 2, (w + side) // 2, (h + side) // 2))
+    return img.resize(_AVATAR_SIZE, Image.LANCZOS)
+
+
 @router.post("/profile/avatar")
 async def upload_avatar(
     request: Request,
@@ -218,18 +225,9 @@ async def upload_avatar(
     if len(data) > 5 * 1024 * 1024:
         return JSONResponse({"error": _("error_image_too_large")}, status_code=400)
 
-    try:
-        img = Image.open(io.BytesIO(data)).convert("RGB")
-    except Exception:
+    img = _process_avatar(data)
+    if img is None:
         return JSONResponse({"error": _("error_invalid_image")}, status_code=400)
-
-    # Center-crop to square then resize to avatar resolution
-    w, h = img.size
-    side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
-    img = img.crop((left, top, left + side, top + side))
-    img = img.resize(_AVATAR_SIZE, Image.LANCZOS)
 
     _AVATARS_DIR.mkdir(parents=True, exist_ok=True)
     dest = _AVATARS_DIR / f"{current_user.id}.webp"

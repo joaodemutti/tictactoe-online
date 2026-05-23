@@ -81,7 +81,7 @@ function showMatchMessageBubble(data) {
             { xPercent: -50, opacity: 1, scale: 1, y: 0, duration: 0.32, ease: "back.out(1.7)" }
         );
     } else {
-        gsap.set(bubble, { xPercent: -50 });
+        bubble.style.transform = "translateX(-50%)";
     }
 
     msgBubbleTimers[role] = setTimeout(() => {
