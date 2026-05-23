@@ -113,7 +113,7 @@ function showMatchMessageBubble(data) {
         } else {
             bubble.classList.add("hidden");
         }
-    }, 4000);
+    }, 7000);
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
@@ -327,6 +327,7 @@ function onBoardState(data) {
         restoreBoard();
         updateTurnIndicator();
     }
+    if (data.countdown_ms) startCountdown(data.countdown_ms);
 }
 
 function onPlayerJoined(data) {
@@ -342,8 +343,8 @@ function onPlayerJoined(data) {
 function onRoleSelected(data) {
     pendingRoleSelections = data.selections || {};
     updateModalSelections(data.selections);
-    if (data.countdown_start) {
-        startCountdown(data.countdown_start);
+    if (data.countdown_ms) {
+        startCountdown(data.countdown_ms);
     } else {
         clearCountdown();
     }
@@ -602,12 +603,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
 
-function startCountdown(startMs) {
+function startCountdown(durationMs) {
     clearCountdown();
     document.getElementById("countdown-wrap").classList.remove("hidden");
+    const deadline = Date.now() + durationMs;
 
     const tick = () => {
-        const remaining = Math.max(0, Math.ceil(5 - (Date.now() - startMs) / 1000));
+        const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
         const el = document.getElementById("countdown-num");
         if (el) el.textContent = remaining;
         if (remaining <= 0) clearCountdown();

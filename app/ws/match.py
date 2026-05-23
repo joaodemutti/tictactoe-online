@@ -19,6 +19,7 @@ router = APIRouter()
 # In-memory role selection state — safe with a single Uvicorn worker
 _pending_selections: dict[str, dict[str, str]] = {}   # match_id → {user_id: role}
 _countdown_tasks:    dict[str, asyncio.Task]   = {}   # match_id → running Task
+_countdown_start:    dict[str, float]          = {}   # match_id → time.monotonic() when countdown began
 
 
 # ── Role resolution ───────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ async def _resolve_after_delay(
     try:
         await asyncio.sleep(5)
     except asyncio.CancelledError:
+        _countdown_start.pop(match_id, None)
         return  # A player changed selection — new task will be started
 
     selections = _pending_selections.get(match_id, {})
@@ -83,6 +85,7 @@ async def _resolve_after_delay(
 
     _pending_selections.pop(match_id, None)
     _countdown_tasks.pop(match_id, None)
+    _countdown_start.pop(match_id, None)
 
 
 async def _handle_move(match_id: str, user_id: str, msg: dict) -> None:
@@ -181,17 +184,18 @@ async def _handle_role_select(
     if old:
         old.cancel()
 
-    countdown_start = int(time.time() * 1000) if len(selections) == len(all_players) else None
+    all_selected = len(selections) == len(all_players)
 
     await manager.broadcast_match(match_id, {
         "type": "role_selected",
         "user_id": user_id,
         "role": None if msg.get("unselect") is True else role,
         "selections": selections,
-        "countdown_start": countdown_start,
+        "countdown_ms": 5000 if all_selected else None,
     })
 
-    if countdown_start is not None:
+    if all_selected:
+        _countdown_start[match_id] = time.monotonic()
         _countdown_tasks[match_id] = asyncio.create_task(
             _resolve_after_delay(match_id, all_players)
         )
@@ -256,6 +260,13 @@ async def match_ws(
     await manager.connect_match(match_id_str, user_id_str, user.username, websocket)
     await manager.broadcast_presence()
 
+    countdown_ms = None
+    if match_id_str in _countdown_start:
+        elapsed_ms = (time.monotonic() - _countdown_start[match_id_str]) * 1000
+        remaining  = max(0, 5000 - elapsed_ms)
+        if remaining > 0:
+            countdown_ms = remaining
+
     await manager.send_to_match_user(match_id_str, user_id_str, {
         "type":         "board_state",
         "board":        board,
@@ -263,6 +274,7 @@ async def match_ws(
         "roles":        roles,
         "selections":   _pending_selections.get(match_id_str, {}),
         "current_turn": current_turn_id,
+        "countdown_ms": countdown_ms,
     })
 
     connected_ids = manager.match_user_ids(match_id_str)

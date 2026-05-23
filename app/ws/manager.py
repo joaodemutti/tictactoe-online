@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Any
 
@@ -48,13 +49,15 @@ class ConnectionManager:
             for uid in online_ids
         ]
 
+    async def _send(self, ws: WebSocket, payload: str) -> None:
+        try:
+            await ws.send_text(payload)
+        except Exception:
+            pass
+
     async def broadcast_hub(self, data: dict[str, Any]) -> None:
         payload = json.dumps(data)
-        for ws in list(self.hub.values()):
-            try:
-                await ws.send_text(payload)
-            except Exception:
-                pass
+        await asyncio.gather(*(self._send(ws, payload) for ws in list(self.hub.values())))
 
     async def broadcast_presence(self) -> None:
         payload = json.dumps({
@@ -64,11 +67,7 @@ class ConnectionManager:
         sockets = list(self.hub.values())
         for room in self.matches.values():
             sockets.extend(room.values())
-        for ws in sockets:
-            try:
-                await ws.send_text(payload)
-            except Exception:
-                pass
+        await asyncio.gather(*(self._send(ws, payload) for ws in sockets))
 
     async def send_to_user(self, user_id: str, data: dict[str, Any]) -> None:
         ws = self.hub.get(user_id)
@@ -99,11 +98,8 @@ class ConnectionManager:
 
     async def broadcast_match(self, match_id: str, data: dict[str, Any]) -> None:
         payload = json.dumps(data)
-        for ws in list(self.matches.get(match_id, {}).values()):
-            try:
-                await ws.send_text(payload)
-            except Exception:
-                pass
+        sockets = list(self.matches.get(match_id, {}).values())
+        await asyncio.gather(*(self._send(ws, payload) for ws in sockets))
 
     async def send_to_match_user(
         self, match_id: str, user_id: str, data: dict[str, Any]
@@ -117,19 +113,13 @@ class ConnectionManager:
 
     async def send_to_any(self, user_id: str, data: dict[str, Any]) -> None:
         payload = json.dumps(data)
-        ws = self.hub.get(user_id)
-        if ws:
-            try:
-                await ws.send_text(payload)
-            except Exception:
-                pass
+        sockets = []
+        if ws := self.hub.get(user_id):
+            sockets.append(ws)
         for room in self.matches.values():
-            ws = room.get(user_id)
-            if ws:
-                try:
-                    await ws.send_text(payload)
-                except Exception:
-                    pass
+            if ws := room.get(user_id):
+                sockets.append(ws)
+        await asyncio.gather(*(self._send(ws, payload) for ws in sockets))
 
 
 manager = ConnectionManager()
