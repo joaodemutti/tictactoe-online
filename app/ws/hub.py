@@ -24,10 +24,11 @@ async def hub_ws(
     user_id = str(user.id)
 
     await manager.connect_hub(user_id, user.username, websocket, avatar_url=user.avatar_url)
-    await manager.broadcast_presence()
 
     async with AsyncSessionLocal() as db:
         invites = await game_service.get_pending_invites(db, user.id)
+    await manager.broadcast_presence()
+
     for invite in invites:
         await manager.send_to_user(user_id, {"type": "invite", **invite})
 

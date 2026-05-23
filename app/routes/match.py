@@ -5,10 +5,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_db, get_current_user
-from app.i18n import TRANSLATIONS, detect_language, get_translator
 from app.models import User
 from app.services import game_service
-from app.templating import templates
+from app.templating import _ctx, templates
 from app.ws.manager import manager
 
 router = APIRouter()
@@ -84,17 +83,12 @@ async def match_page(
     if players is None:
         raise HTTPException(status_code=403, detail="Not a player in this match")
 
-    lang = detect_language(request, current_user)
     return templates.TemplateResponse(
         request,
         "match.html",
-        {
-            "user": current_user,
-            "match_id": str(match.id),
-            "match_status": match.status.value,
-            "players": players,
-            "lang": lang,
-            "_": get_translator(lang),
-            "i18n": TRANSLATIONS[lang],
-        },
+        _ctx(request, current_user,
+             user=current_user,
+             match_id=str(match.id),
+             match_status=match.status.value,
+             players=players),
     )

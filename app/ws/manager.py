@@ -7,7 +7,7 @@ from fastapi import WebSocket
 
 class ConnectionManager:
     def __init__(self) -> None:
-        self.hub: dict[str, WebSocket] = {}        # user_id → WebSocket
+        self.hub: dict[str, list[WebSocket]] = {}  # user_id → list of open sockets
         self.hub_users: dict[str, str] = {}        # user_id → username
         self.usernames: dict[str, str] = {}        # user_id → last known username
         self.avatars: dict[str, str | None] = {}   # user_id → avatar_url
@@ -17,16 +17,20 @@ class ConnectionManager:
 
     async def connect_hub(self, user_id: str, username: str, ws: WebSocket, avatar_url: str | None = None) -> None:
         await ws.accept()
-        self.hub[user_id] = ws
+        self.hub.setdefault(user_id, []).append(ws)
         self.hub_users[user_id] = username
         self.usernames[user_id] = username
         self.avatars[user_id] = avatar_url
 
     def disconnect_hub(self, user_id: str, ws: WebSocket) -> None:
-        # Guard: only remove if this is still the active connection for the user
-        if self.hub.get(user_id) is ws:
-            self.hub.pop(user_id)
+        sockets = self.hub.get(user_id, [])
+        if ws in sockets:
+            sockets.remove(ws)
+        if not sockets:
+            self.hub.pop(user_id, None)
             self.hub_users.pop(user_id, None)
+            self.usernames.pop(user_id, None)
+            self.avatars.pop(user_id, None)
 
     def online_players_list(self) -> list[dict[str, str | bool | None]]:
         online_ids = set(self.hub_users)
@@ -55,27 +59,20 @@ class ConnectionManager:
         except Exception:
             pass
 
-    async def broadcast_hub(self, data: dict[str, Any]) -> None:
-        payload = json.dumps(data)
-        await asyncio.gather(*(self._send(ws, payload) for ws in list(self.hub.values())))
-
     async def broadcast_presence(self) -> None:
         payload = json.dumps({
             "type": "players_online",
             "players": self.online_players_list(),
         })
-        sockets = list(self.hub.values())
+        sockets = [ws for wss in self.hub.values() for ws in wss]
         for room in self.matches.values():
             sockets.extend(room.values())
         await asyncio.gather(*(self._send(ws, payload) for ws in sockets))
 
     async def send_to_user(self, user_id: str, data: dict[str, Any]) -> None:
-        ws = self.hub.get(user_id)
-        if ws:
-            try:
-                await ws.send_text(json.dumps(data))
-            except Exception:
-                pass
+        payload = json.dumps(data)
+        for ws in list(self.hub.get(user_id, [])):
+            await self._send(ws, payload)
 
     # ── Match ─────────────────────────────────────────────────────────────────
 
@@ -114,8 +111,7 @@ class ConnectionManager:
     async def send_to_any(self, user_id: str, data: dict[str, Any]) -> None:
         payload = json.dumps(data)
         sockets = []
-        if ws := self.hub.get(user_id):
-            sockets.append(ws)
+        sockets.extend(self.hub.get(user_id, []))
         for room in self.matches.values():
             if ws := room.get(user_id):
                 sockets.append(ws)

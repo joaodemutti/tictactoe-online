@@ -12,15 +12,12 @@ from app.deps import get_current_user, get_db
 from app.i18n import TRANSLATIONS, detect_language, get_translator
 from app.models import User
 from app.auth import hash_password, verify_password, create_access_token, COOKIE_NAME
-from app.templating import templates
+from app.templating import _ctx, templates
+
+_AVATARS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "static" / "avatars"
+_AVATAR_SIZE = (128, 128)
 
 router = APIRouter()
-
-
-def _ctx(request: Request, user=None, **extra):
-    lang = detect_language(request, user)
-    _ = get_translator(lang)
-    return {"lang": lang, "_": _, "i18n": TRANSLATIONS[lang], **extra}
 
 
 @router.get("/login")
@@ -195,10 +192,6 @@ async def update_profile(
     })
     response.set_cookie(key="lang", value=current_user.language_code, samesite="lax")
     return response
-
-
-_AVATARS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "static" / "avatars"
-_AVATAR_SIZE = (128, 128)
 
 
 def _process_avatar(data: bytes) -> "Image.Image | None":

@@ -4,7 +4,7 @@ let currentUsername = CURRENT_USERNAME;
 let currentEmail = CURRENT_EMAIL;
 
 const hubWs = createReconnectingWs('/ws/hub', {
-    onopen: loadOngoingMatches,
+    onopen() { seenInvites.clear(); loadOngoingMatches(); },
     onmessage(data) {
         if (data.type === "players_online") onPlayersOnline(data);
         if (data.type === "invite")         renderInvite(data);

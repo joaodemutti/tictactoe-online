@@ -35,7 +35,7 @@ async def get_ongoing_matches(
 
 async def find_or_create_invite(
     db: AsyncSession, inviter_id: uuid.UUID, target_id: uuid.UUID
-) -> tuple[Match | None, bool | None]:
+) -> "tuple[Match, bool] | tuple[None, None]":
     """Return (match, is_new). match is None if target user not found."""
     result = await db.execute(select(User).where(User.id == target_id))
     if not result.scalar_one_or_none():
