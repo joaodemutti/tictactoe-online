@@ -1,15 +1,13 @@
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-from sqlalchemy.orm import aliased
 
 from app.deps import get_db, get_current_user
 from app.i18n import TRANSLATIONS, detect_language, get_translator
-from app.models import User, Match, MatchPlayer, MatchStatus
+from app.models import User
+from app.services import game_service
 from app.templating import templates
 from app.ws.manager import manager
 
@@ -21,28 +19,8 @@ async def get_ongoing_matches(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    OtherMP = aliased(MatchPlayer)
-
-    result = await db.execute(
-        select(Match, OtherMP.user_id)
-        .join(
-            MatchPlayer,
-            (MatchPlayer.match_id == Match.id) & (MatchPlayer.user_id == current_user.id),
-        )
-        .join(
-            OtherMP,
-            (OtherMP.match_id == Match.id) & (OtherMP.user_id != current_user.id),
-        )
-        .where(Match.status.in_([MatchStatus.waiting, MatchStatus.active]))
-        .order_by(Match.created_at.desc())
-    )
-
-    rows = result.all()
-    ongoing_by_user: dict[str, str] = {}
-    for match, other_user_id in rows:
-        ongoing_by_user.setdefault(str(other_user_id), str(match.id))
-
-    return {"matches": ongoing_by_user}
+    ongoing = await game_service.get_ongoing_matches(db, current_user.id)
+    return {"matches": ongoing}
 
 
 @router.post("/match/invite")
@@ -60,40 +38,17 @@ async def create_invite(
     if target_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot invite yourself")
 
-    result = await db.execute(select(User).where(User.id == target_id))
-    target_user = result.scalar_one_or_none()
-    if not target_user:
+    match, is_new = await game_service.find_or_create_invite(db, current_user.id, target_id)
+    if match is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check for an existing waiting or active match between the two players
-    my_match_ids = select(MatchPlayer.match_id).where(MatchPlayer.user_id == current_user.id)
-    their_match_ids = select(MatchPlayer.match_id).where(MatchPlayer.user_id == target_id)
-
-    result = await db.execute(
-        select(Match).where(
-            Match.id.in_(my_match_ids),
-            Match.id.in_(their_match_ids),
-            Match.status.in_([MatchStatus.waiting, MatchStatus.active]),
-        )
-    )
-    existing = result.scalar_one_or_none()
-    if existing:
+    if not is_new:
         return JSONResponse({
-            "match_id": str(existing.id),
+            "match_id": str(match.id),
             "existing": True,
-            "from_user_id": str(existing.inviter_id) if existing.inviter_id else None,
+            "from_user_id": str(match.inviter_id) if match.inviter_id else None,
         })
 
-    # Create a new match in waiting status
-    match = Match(inviter_id=current_user.id)
-    db.add(match)
-    await db.flush()
-
-    db.add(MatchPlayer(match_id=match.id, user_id=current_user.id, read_at=datetime.now(timezone.utc)))
-    db.add(MatchPlayer(match_id=match.id, user_id=target_id))
-    await db.commit()
-
-    # Push invite event to the target wherever they are connected.
     await manager.send_to_any(str(target_id), {
         "type": "invite",
         "match_id": str(match.id),
@@ -110,24 +65,9 @@ async def mark_invite_read(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(MatchPlayer)
-        .join(Match, Match.id == MatchPlayer.match_id)
-        .where(
-            MatchPlayer.match_id == match_id,
-            MatchPlayer.user_id == current_user.id,
-            Match.status == MatchStatus.waiting,
-        )
-    )
-    if not result.scalar_one_or_none():
+    found = await game_service.mark_invite_read(db, match_id, current_user.id)
+    if not found:
         raise HTTPException(status_code=404, detail="Invite not found")
-
-    await db.execute(
-        update(MatchPlayer)
-        .where(MatchPlayer.match_id == match_id, MatchPlayer.user_id == current_user.id)
-        .values(read_at=datetime.now(timezone.utc))
-    )
-    await db.commit()
     return JSONResponse({"ok": True})
 
 
@@ -138,29 +78,11 @@ async def match_page(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Match).where(Match.id == match_id))
-    match = result.scalar_one_or_none()
+    match, players = await game_service.get_match_page_data(db, match_id, current_user.id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
-
-    result = await db.execute(
-        select(MatchPlayer).where(
-            MatchPlayer.match_id == match_id,
-            MatchPlayer.user_id == current_user.id,
-        )
-    )
-    if not result.scalar_one_or_none():
+    if players is None:
         raise HTTPException(status_code=403, detail="Not a player in this match")
-
-    result = await db.execute(
-        select(User)
-        .join(MatchPlayer, MatchPlayer.user_id == User.id)
-        .where(MatchPlayer.match_id == match_id)
-    )
-    players = [
-        {"user_id": str(u.id), "username": u.username, "avatar_url": u.avatar_url}
-        for u in result.scalars().all()
-    ]
 
     lang = detect_language(request, current_user)
     return templates.TemplateResponse(

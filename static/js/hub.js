@@ -1,56 +1,25 @@
-const RECONNECT_BASE_MS = 1000;
-const RECONNECT_MAX_MS = 30000;
-
-let hubWs = null;
-let reconnectDelay = RECONNECT_BASE_MS;
 let playersOnline = [];
 const ongoingMatches = {};
 let currentUsername = CURRENT_USERNAME;
 let currentEmail = CURRENT_EMAIL;
 
-function connectHub() {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    hubWs = new WebSocket(`${proto}//${location.host}/ws/hub`);
-
-    hubWs.onopen = () => {
-        reconnectDelay = RECONNECT_BASE_MS;
-        loadOngoingMatches();
-    };
-
-    hubWs.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+const hubWs = createReconnectingWs('/ws/hub', {
+    onopen: loadOngoingMatches,
+    onmessage(data) {
         if (data.type === "players_online") onPlayersOnline(data);
         if (data.type === "invite")         renderInvite(data);
         if (data.type === "message")        onNewMessage(data);
         if (data.type === "message_read")   onMessageRead(data);
-    };
-
-    hubWs.onclose = () => {
-        setTimeout(connectHub, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
-    };
-
-    hubWs.onerror = () => {
-        hubWs.close();
-    };
-}
-
-connectHub();
+    },
+});
 
 // ── Player grid ───────────────────────────────────────────────────────────────
 
 function onPlayersOnline(data) {
-    const apply = typeof applyPresenceSnapshot === "function" ? applyPresenceSnapshot : null;
-    if (apply) {
-        apply(data.players, players => {
-            playersOnline = players;
-            renderPlayersOnline();
-        });
-        return;
-    }
-    playersOnline = data.players;
-    renderPlayersOnline();
-    if (typeof updateChatPresence === "function") updateChatPresence(data.players);
+    applyPresenceSnapshot(data.players, players => {
+        playersOnline = players;
+        renderPlayersOnline();
+    });
 }
 
 function avatarHtml(userId, username, size = "w-14 h-14", textSize = "text-2xl") {
@@ -290,9 +259,7 @@ async function dismissInvite(matchId) {
     try {
         await fetch(`/match/invite/${matchId}/read`, { method: "POST" });
     } catch (_) {}
-    if (typeof dismissInviteLocally === "function") {
-        dismissInviteLocally(matchId);
-    }
+    dismissInviteLocally(matchId);
 
     const card = document
         .getElementById("invites-container")

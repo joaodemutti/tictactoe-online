@@ -1,38 +1,19 @@
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 
-const RECONNECT_BASE_MS = 1000;
-const RECONNECT_MAX_MS  = 30000;
-
-let matchWs       = null;
-let reconnectDelay = RECONNECT_BASE_MS;
-
-function connectMatch() {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    matchWs = new WebSocket(`${proto}//${location.host}/ws/match/${MATCH_ID}`);
-
-    matchWs.onopen  = () => { reconnectDelay = RECONNECT_BASE_MS; };
-    matchWs.onclose = () => {
-        setTimeout(connectMatch, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
-    };
-    matchWs.onerror = () => { matchWs.close(); };
-
-    matchWs.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "board_state")   onBoardState(data);
-        if (data.type === "player_joined") onPlayerJoined(data);
-        if (data.type === "role_selected") onRoleSelected(data);
-        if (data.type === "game_start")    onGameStart(data);
-        if (data.type === "move")          onMove(data);
-        if (data.type === "game_over")     onGameOver(data);
-        if (data.type === "message")       { onNewMessage(data); showMatchMessageBubble(data); }
-        if (data.type === "message_read")  onMessageRead(data);
-        if (data.type === "invite")        onInviteReceived(data);
+const matchWs = createReconnectingWs(`/ws/match/${MATCH_ID}`, {
+    onmessage(data) {
+        if (data.type === "board_state")    onBoardState(data);
+        if (data.type === "player_joined")  onPlayerJoined(data);
+        if (data.type === "role_selected")  onRoleSelected(data);
+        if (data.type === "game_start")     onGameStart(data);
+        if (data.type === "move")           onMove(data);
+        if (data.type === "game_over")      onGameOver(data);
+        if (data.type === "message")        { onNewMessage(data); showMatchMessageBubble(data); }
+        if (data.type === "message_read")   onMessageRead(data);
+        if (data.type === "invite")         onInviteReceived(data);
         if (data.type === "players_online") onPlayersOnline(data);
-    };
-}
-
-connectMatch();
+    },
+});
 
 // Seed avatar cache from match player list so the chat drawer can show photos
 MATCH_PLAYERS.forEach(p => { if (p.avatar_url) playerAvatars[p.user_id] = p.avatar_url; });
@@ -182,7 +163,6 @@ function renderMark(index, mark, animate = true) {
 }
 
 function onCellClick(e) {
-    // Step 6: send move to server
     const cell = e.target.closest(".cell");
     if (!cell) return;
     const index = parseInt(cell.dataset.index, 10);
@@ -287,7 +267,7 @@ function clearWaitingOfflineTimer() {
 }
 
 function onPlayersOnline(data) {
-    const sync = players => {
+    applyPresenceSnapshot(data.players, players => {
         onlinePlayerIds.clear();
         playingPlayerIds.clear();
         (players || []).forEach(player => {
@@ -298,17 +278,7 @@ function onPlayersOnline(data) {
         waitingOfflineCheckReady = true;
         updateWaitingOfflineLabel();
         updateMatchPresenceLabels();
-    };
-
-    if (typeof applyPresenceSnapshot === "function") {
-        applyPresenceSnapshot(data.players, sync);
-        return;
-    }
-
-    sync(data.players);
-    if (typeof updateChatPresence === "function") {
-        updateChatPresence(data.players);
-    }
+    });
 }
 
 function onBoardState(data) {
@@ -364,7 +334,6 @@ function onGameStart(data) {
 }
 
 function onMove(data) {
-    // Step 6
     board[data.position] = data.mark;
     renderMark(data.position, data.mark);
     currentTurn = data.next_turn;

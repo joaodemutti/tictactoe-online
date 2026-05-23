@@ -1,10 +1,7 @@
 import uuid
-from datetime import datetime, timezone
-
-from sqlalchemy import select, update
 
 from app.database import AsyncSessionLocal
-from app.models import Message, User
+from app.services import message_service
 from app.ws.manager import manager
 
 
@@ -22,18 +19,12 @@ async def handle_send_message(sender_id: str, sender_username: str, msg: dict) -
     sender_uuid = uuid.UUID(sender_id)
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.id == receiver_uuid))
-        receiver = result.scalar_one_or_none()
-        if not receiver:
-            return
+        result = await message_service.save_message(db, sender_uuid, receiver_uuid, content)
 
-        message = Message(
-            sender_id=sender_uuid,
-            receiver_id=receiver_uuid,
-            content=content,
-        )
-        db.add(message)
-        await db.commit()
+    if result is None:
+        return
+
+    message, receiver = result
 
     payload = {
         "type":              "message",
@@ -62,16 +53,7 @@ async def handle_mark_read(reader_id: str, msg: dict) -> None:
         return
 
     async with AsyncSessionLocal() as db:
-        await db.execute(
-            update(Message)
-            .where(
-                Message.sender_id == sender_uuid,
-                Message.receiver_id == reader_uuid,
-                Message.read_at.is_(None),
-            )
-            .values(read_at=datetime.now(timezone.utc))
-        )
-        await db.commit()
+        await message_service.mark_messages_read(db, sender_uuid, reader_uuid)
 
     await manager.send_to_any(sender_id, {
         "type":      "message_read",
