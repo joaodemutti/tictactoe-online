@@ -14,4 +14,4 @@ templates.env.filters["tojson"] = lambda value: Markup(json.dumps(value, default
 def _ctx(request: Request, user: Any = None, **extra: Any) -> dict[str, Any]:
     lang = detect_language(request, user)
     _ = get_translator(lang)
-    return {"lang": lang, "_": _, "i18n": TRANSLATIONS[lang], **extra}
+    return {"lang": lang, "_": _, "i18n": TRANSLATIONS[lang], "user": user, **extra}

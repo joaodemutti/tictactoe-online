@@ -7,27 +7,33 @@ from fastapi import WebSocket
 
 class ConnectionManager:
     def __init__(self) -> None:
-        self.hub: dict[str, list[WebSocket]] = {}  # user_id → list of open sockets
-        self.hub_users: dict[str, str] = {}        # user_id → username
-        self.usernames: dict[str, str] = {}        # user_id → last known username
-        self.avatars: dict[str, str | None] = {}   # user_id → avatar_url
+        self.hub: dict[str, WebSocket] = {}              # user_id → active socket
+        self.hub_users: dict[str, str] = {}              # user_id → username
+        self.usernames: dict[str, str] = {}              # user_id → last known username
+        self.avatars: dict[str, str | None] = {}         # user_id → avatar_url
         self.matches: dict[str, dict[str, WebSocket]] = {}  # match_id → {user_id → ws}
 
     # ── Hub ──────────────────────────────────────────────────────────────────
 
     async def connect_hub(self, user_id: str, username: str, ws: WebSocket, avatar_url: str | None = None) -> None:
         await ws.accept()
-        self.hub.setdefault(user_id, []).append(ws)
+        old = self.hub.get(user_id)
+        # Store new socket first so disconnect_hub from the old connection's
+        # finally block sees the new socket and leaves it alone.
+        self.hub[user_id] = ws
         self.hub_users[user_id] = username
         self.usernames[user_id] = username
         self.avatars[user_id] = avatar_url
+        if old is not None:
+            await self._send(old, json.dumps({"type": "session_replaced"}))
+            try:
+                await old.close()
+            except Exception:
+                pass
 
     def disconnect_hub(self, user_id: str, ws: WebSocket) -> None:
-        sockets = self.hub.get(user_id, [])
-        if ws in sockets:
-            sockets.remove(ws)
-        if not sockets:
-            self.hub.pop(user_id, None)
+        if self.hub.get(user_id) is ws:
+            self.hub.pop(user_id)
             self.hub_users.pop(user_id, None)
             self.usernames.pop(user_id, None)
             self.avatars.pop(user_id, None)
@@ -64,15 +70,15 @@ class ConnectionManager:
             "type": "players_online",
             "players": self.online_players_list(),
         })
-        sockets = [ws for wss in self.hub.values() for ws in wss]
+        sockets = list(self.hub.values())
         for room in self.matches.values():
             sockets.extend(room.values())
         await asyncio.gather(*(self._send(ws, payload) for ws in sockets))
 
     async def send_to_user(self, user_id: str, data: dict[str, Any]) -> None:
-        payload = json.dumps(data)
-        for ws in list(self.hub.get(user_id, [])):
-            await self._send(ws, payload)
+        ws = self.hub.get(user_id)
+        if ws:
+            await self._send(ws, json.dumps(data))
 
     # ── Match ─────────────────────────────────────────────────────────────────
 
@@ -111,7 +117,8 @@ class ConnectionManager:
     async def send_to_any(self, user_id: str, data: dict[str, Any]) -> None:
         payload = json.dumps(data)
         sockets = []
-        sockets.extend(self.hub.get(user_id, []))
+        if ws := self.hub.get(user_id):
+            sockets.append(ws)
         for room in self.matches.values():
             if ws := room.get(user_id):
                 sockets.append(ws)

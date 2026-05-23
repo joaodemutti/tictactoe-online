@@ -84,6 +84,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "presence_offline": "{name} is offline",
         "presence_left": "{name} left",
         "presence_currently_offline": "{name} is currently offline",
+        "session_replaced_title": "Connected in another tab",
+        "session_replaced_body": "You opened this page in another tab. Only one session is allowed at a time.",
+        "btn_reload": "Reload",
     },
     "pt-BR": {
         "page_title": "Jogo da Velha",
@@ -166,6 +169,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "presence_offline": "{name} está offline",
         "presence_left": "{name} saiu",
         "presence_currently_offline": "{name} está offline no momento",
+        "session_replaced_title": "Conectado em outra aba",
+        "session_replaced_body": "Você abriu esta página em outra aba. Apenas uma sessão é permitida por vez.",
+        "btn_reload": "Recarregar",
     },
 }
 

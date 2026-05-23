@@ -6,10 +6,11 @@ let currentEmail = CURRENT_EMAIL;
 const hubWs = createReconnectingWs('/ws/hub', {
     onopen() { seenInvites.clear(); loadOngoingMatches(); },
     onmessage(data) {
-        if (data.type === "players_online") onPlayersOnline(data);
-        if (data.type === "invite")         renderInvite(data);
-        if (data.type === "message")        onNewMessage(data);
-        if (data.type === "message_read")   onMessageRead(data);
+        if (data.type === "players_online")  onPlayersOnline(data);
+        if (data.type === "invite")          renderInvite(data);
+        if (data.type === "message")         onNewMessage(data);
+        if (data.type === "message_read")    onMessageRead(data);
+        if (data.type === "session_replaced") onSessionReplaced();
     },
 });
 
@@ -20,6 +21,22 @@ function onPlayersOnline(data) {
         playersOnline = players;
         renderPlayersOnline();
     });
+}
+
+function onSessionReplaced() {
+    hubWs.stop();
+    document.body.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+            <div class="text-center">
+                <p class="text-white text-lg font-semibold mb-2">${t('session_replaced_title')}</p>
+                <p class="text-gray-400 text-sm mb-6">${t('session_replaced_body')}</p>
+                <button onclick="location.reload()"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg
+                               text-sm font-semibold text-white transition-colors">
+                    ${t('btn_reload')}
+                </button>
+            </div>
+        </div>`;
 }
 
 function avatarHtml(userId, username, size = "w-14 h-14", textSize = "text-2xl") {
