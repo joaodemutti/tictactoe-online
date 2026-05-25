@@ -87,7 +87,6 @@ async def match_page(
         request,
         "match.html",
         _ctx(request, current_user,
-             user=current_user,
              match_id=str(match.id),
              match_status=match.status.value,
              players=players),
