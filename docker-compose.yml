@@ -25,7 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@tictactoe-db:5432/tictactoe
     depends_on:
-      db:
+      tictactoe-db:
         condition: service_healthy
 
 volumes:
