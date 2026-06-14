@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 from app.config import settings
 
 COOKIE_NAME = "access_token"
+
+_TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -29,3 +32,18 @@ def decode_token(token: str) -> str | None:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+async def verify_turnstile(token: str, remoteip: str | None) -> bool:
+    if not settings.TURNSTILE_SECRET_KEY:
+        return True  # captcha disabled (dev) — skip verification
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(_TURNSTILE_VERIFY_URL, data={
+                "secret": settings.TURNSTILE_SECRET_KEY,
+                "response": token,
+                "remoteip": remoteip,
+            })
+        return resp.json().get("success", False)
+    except Exception:
+        return False

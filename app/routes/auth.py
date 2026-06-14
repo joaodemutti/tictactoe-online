@@ -8,10 +8,11 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
-from app.deps import get_current_user, get_db
+from app.config import settings
+from app.deps import get_client_ip, get_current_user, get_db
 from app.i18n import TRANSLATIONS, detect_language, get_translator
 from app.models import User
-from app.auth import hash_password, verify_password, create_access_token, COOKIE_NAME
+from app.auth import hash_password, verify_password, create_access_token, verify_turnstile, COOKIE_NAME
 from app.templating import _ctx, templates
 
 _AVATARS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "static" / "avatars"
@@ -22,12 +23,16 @@ router = APIRouter()
 
 @router.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse(request, "auth/login.html", _ctx(request))
+    return templates.TemplateResponse(
+        request, "auth/login.html", _ctx(request, site_key=settings.TURNSTILE_SITE_KEY)
+    )
 
 
 @router.get("/signup")
 async def signup_page(request: Request):
-    return templates.TemplateResponse(request, "auth/signup.html", _ctx(request))
+    return templates.TemplateResponse(
+        request, "auth/signup.html", _ctx(request, site_key=settings.TURNSTILE_SITE_KEY)
+    )
 
 
 @router.post("/signup")
@@ -37,17 +42,26 @@ async def signup(
     email: str | None = Form(None),
     password: str = Form(...),
     avatar: UploadFile = File(None),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     db: AsyncSession = Depends(get_db),
 ):
     lang = detect_language(request)
     _ = get_translator(lang)
+
+    if not await verify_turnstile(cf_turnstile_response, get_client_ip(request)):
+        return templates.TemplateResponse(
+            request, "auth/signup.html",
+            _ctx(request, error=_("error_captcha_failed"), site_key=settings.TURNSTILE_SITE_KEY),
+            status_code=400,
+        )
+
     email = email.strip() if email else None
     email = email or None
 
     if len(username) > 20:
         return templates.TemplateResponse(
             request, "auth/signup.html",
-            _ctx(request, error=_("error_username_too_long")),
+            _ctx(request, error=_("error_username_too_long"), site_key=settings.TURNSTILE_SITE_KEY),
             status_code=400,
         )
 
@@ -59,7 +73,7 @@ async def signup(
         return templates.TemplateResponse(
             request,
             "auth/signup.html",
-            _ctx(request, error=_("error_username_email_taken")),
+            _ctx(request, error=_("error_username_email_taken"), site_key=settings.TURNSTILE_SITE_KEY),
             status_code=400,
         )
 
@@ -97,8 +111,19 @@ async def login(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     db: AsyncSession = Depends(get_db),
 ):
+    if not await verify_turnstile(cf_turnstile_response, get_client_ip(request)):
+        lang = detect_language(request)
+        _ = get_translator(lang)
+        return templates.TemplateResponse(
+            request,
+            "auth/login.html",
+            _ctx(request, error=_("error_captcha_failed"), site_key=settings.TURNSTILE_SITE_KEY),
+            status_code=400,
+        )
+
     result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
 
@@ -108,7 +133,7 @@ async def login(
         return templates.TemplateResponse(
             request,
             "auth/login.html",
-            _ctx(request, error=_("error_invalid_credentials")),
+            _ctx(request, error=_("error_invalid_credentials"), site_key=settings.TURNSTILE_SITE_KEY),
             status_code=401,
         )
 

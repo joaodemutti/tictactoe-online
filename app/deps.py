@@ -22,6 +22,14 @@ async def ws_origin_allowed(websocket: WebSocket) -> bool:
     return True
 
 
+def get_client_ip(request: Request) -> str | None:
+    # Behind Cloudflare every request hits us from 127.0.0.1; the real visitor
+    # IP comes in CF-Connecting-IP. Fall back to the socket peer in dev.
+    return request.headers.get("cf-connecting-ip") or (
+        request.client.host if request.client else None
+    )
+
+
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
