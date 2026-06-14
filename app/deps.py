@@ -6,11 +6,20 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
 from app.auth import COOKIE_NAME, decode_token
+from app.config import settings
 from app.models import User
 
 
 class RequiresLogin(Exception):
     pass
+
+
+async def ws_origin_allowed(websocket: WebSocket) -> bool:
+    origin = websocket.headers.get("origin")
+    if origin not in settings.allowed_origins:
+        await websocket.close(code=4403)
+        return False
+    return True
 
 
 async def get_db():

@@ -6,7 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from app.database import AsyncSessionLocal
-from app.deps import ws_get_current_user
+from app.deps import ws_get_current_user, ws_origin_allowed
 from app.models import User
 from app.services import game_service
 from app.ws.chat import handle_send_message, handle_mark_read
@@ -121,6 +121,8 @@ async def match_ws(
     match_id: uuid.UUID,
     user: User | None = Depends(ws_get_current_user),
 ) -> None:
+    if not await ws_origin_allowed(websocket):
+        return
     if user is None:
         await websocket.close(code=4001)
         return
