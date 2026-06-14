@@ -42,10 +42,13 @@ cp .env.example .env           # macOS/Linux
 # 4. Start PostgreSQL
 docker compose up -d
 
-# 5. Run migrations
+# 5. Grant DB privileges (run once, after creating the tictactoe_user / tictactoe_app roles)
+sudo -u postgres psql -d tictactoe -f scripts/roles.sql
+
+# 6. Run migrations
 alembic upgrade head
 
-# 6. Start the server
+# 7. Start the server
 uvicorn app.main:app --reload
 ```
 
@@ -55,7 +58,8 @@ Open <http://localhost:8000> in two separate browser profiles or tabs to test mu
 
 | Variable | Description | Default in `.env.example` |
 |---|---|---|
-| `DATABASE_URL` | asyncpg connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/tictactoe` |
+| `DATABASE_URL` | App runtime connection (role `tictactoe_app`, DML only) | `postgresql+asyncpg://tictactoe_app:CHANGE_ME@localhost:5432/tictactoe` |
+| `MIGRATION_DATABASE_URL` | Alembic connection (role `tictactoe_user`, owner/DDL) | `postgresql+asyncpg://tictactoe_user:CHANGE_ME@localhost:5432/tictactoe` |
 | `JWT_SECRET` | Secret key for signing tokens | `change-me-in-production` |
 | `JWT_EXPIRE_MINUTES` | Token lifetime | `10080` (7 days) |
 
