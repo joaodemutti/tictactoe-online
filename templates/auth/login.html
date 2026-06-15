@@ -54,7 +54,7 @@
                 <input type="password" name="password" required autocomplete="current-password"
                     class="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-            {% if site_key %}<div class="cf-turnstile" data-sitekey="{{ site_key }}" data-size="flexible"></div>{% endif %}
+            {% if site_key %}<div class="cf-turnstile w-full" data-sitekey="{{ site_key }}" data-size="flexible"></div>{% endif %}
             <button type="submit"
                 class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors">
                 {{ _('btn_login') }}
