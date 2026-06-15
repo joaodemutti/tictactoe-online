@@ -371,8 +371,8 @@ function appendGameSummary(games) {
 }
 
 function positionInviteSlot() {
-    let invite = document.getElementById('thread-invite-btn')?.classList.contains("hidden");
-    let summary = document.getElementById('game-summary-text')?.classList.contains("hidden");
+    let invite = !document.getElementById('thread-invite-btn')?.classList.contains("hidden");
+    let summary = !document.getElementById('game-summary-text')?.classList.contains("hidden");
     let thread = document.getElementById('thread-messages');
 
     if (invite && summary) {
