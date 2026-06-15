@@ -40,22 +40,12 @@ matéria — como clímax antes da conclusão).
 - **Roteiro de hoje** (quem fala o quê): Tecnologias · Arquitetura+Banco · Funcionalidades+Algoritmo · Demonstração
 
 FALA:
-> "Boa tarde. Nosso projeto é um **Jogo da Velha Online**. A ideia parece simples — todo mundo
-> conhece o jogo da velha — mas o nosso é **multiplayer e em tempo real**: dois jogadores em
-> computadores diferentes entram no site, se convidam e jogam ao vivo, vendo a jogada do outro na
-> hora.
->
-> Como a matéria é Lógica de Programação, o **foco do trabalho é a lógica**: como representamos o
-> tabuleiro no código e qual o **algoritmo que decide quem ganhou ou se deu velha**. Esse é o tema
-> principal, e a Pessoa 4 vai entrar fundo nele.
->
-> O escopo completo é: o jogador faz **login**, vê **quem está online**, **convida** alguém, os dois
-> **escolhem X ou O**, **jogam em tempo real** e ainda podem **conversar por chat**.
->
-> Pra apresentar, a gente se dividiu assim: o/a **[Pessoa 2]** vai falar das **tecnologias** que
-> usamos; o/a **[Pessoa 3]** mostra a **arquitetura e o banco de dados**; o/a **[Pessoa 4]** explica
-> as **funcionalidades e o algoritmo do jogo**, que é o coração do trabalho; e eu volto no final pra
-> uma **demonstração** e a conclusão. Passo pro/pra **[Pessoa 2]**."
+> Boa noite, sou o João integrante de um grupo composto por 4 pessoas, sendo eles Kauan, Lucas e Victor.
+> Antes de começar, adotamos uma apresentação dinâmica e interativa então queria disponibilizar o QRCode e Link do nosso projeto em produção que estará no canto superior direito em todos os slides, eu icentivo vocês acessarem pq assim nos ajuda a testar e criar a primeira experiência de uso do nosso sistema em produção, e assim a gente até se diverte um pouco.
+> Bom nosso tema/problema abordado foi a solução do algoritmo do jogo da velha. Por mas que pareça um tema simples nossa solução foi a proposta de um projeto com escopo MVP que é uma sigla que significa Minimo Projeto Viavel, esse termo na TI é uma forma de fazer a entrega de um produto que não remete sua forma final contendo espaços para melhorias e funcionalidades futuras.
+> Com isso desenvolvemos um jogo que possibilita disputar com seus amigos em tempo real.
+> A seguir o Kauan vai abordar a Stack e Tecnologias Utilizadas, depois o Lucas vai relatar nossa arquitetura do sistema, finalizando com o Victor explicando as funcionalidades com enfase na solução do algoritmo do jogo da velha utilizando matrizes em python.
+> Kauan, pode seguir por favor.
 
 ---
 
@@ -65,9 +55,59 @@ FALA:
 
 **[SLIDE 3 — Stack]**
 - **Back-end:** Python · **FastAPI** · Uvicorn · WebSockets
-- **Banco de dados:** **PostgreSQL** · SQLAlchemy (ORM async) + asyncpg · Alembic (migrações)
-- **Autenticação:** JWT em cookie · bcrypt (hash de senha)
-- **Front-end:** **Jinja2** (HTML) · Tailwind CSS · **GSAP + SVG** (animações) · **JavaScript puro (sem framework)**
+- **Banco de dados:** **PostgreSQL** · SQLAlchemy (ORM async) + · Alembic (migrações)
+- **Autenticação:** JWT em cookie . (hash de senha)
+- **Front-end:** **Jinja2** (HTML) . **JavaScript puro (sem framework)**
+
+FALA:
+> Boa noite, sou Kauan e nossa Stack adotada para projetar o sistema foi a seguinte:
+> A linguagem de programação principal foi Python com o framework FastApi incluindo rotas WebSocket
+> Para o banco de dados foi utilzado o Postgres com as bibliotecas Python SQLAlchemy e Alembic
+> A autenticação StateLess é baseada em JWT (Json Web Token) com hash de senha
+> e para o front a biblioteca Python Jinja2 para os templates HTML CSS e JS
+> Agora passo a palvara para o Lucas
+
+
+## PESSOA 3 — Arquitetura + Banco (~3 min)
+
+> Objetivo: mostrar **como o sistema é organizado** (diagrama) e a **estrutura do banco** (DER).
+> Deixar o "como uma jogada funciona" para a Pessoa 4.
+
+
+**[SLIDE 5 — Diagrama de arquitetura]** (banco à esquerda · servidor no meio · navegador à direita)
+```
+   ┌──────────────┐        ┌───────────────────────────┐         ┌────────────────────┐
+   │  PostgreSQL  │◄─ SQL ─►│   SERVIDOR — FastAPI      │         │     NAVEGADOR      │
+   │   (banco)    │ Alchemy │   (Python)                │◄─ Jinja2/HTML ─┤  (cliente)         │
+   │              │(asyncpg)│  rotas · API · serviços   │   (páginas)    │  HTML · Tailwind   │
+   │  5 tabelas   │         │  game/logic.py · WebSocket│◄─ API (JSON) ──►│  JS puro · GSAP    │
+   │              │         │                           │◄─ WebSocket ──►│  hub.js · match.js │
+   └──────────────┘        └───────────────────────────┘  (tempo real)  └────────────────────┘
+       (esquerda)                    (meio)                                   (direita)
+```
+- O cliente conversa com o servidor por **3 canais**: páginas **Jinja2/HTML**, **API (JSON)** e **WebSocket** (tempo real)
+
+FALA:
+> Boa noite, sou o Lucas e nesse slide podemos visualizar a arquitetura funcional do nosso sistema.
+> Como podemos ver ela possui 3 camadas, a princpal camada oquestradora é o servidor FastAPI em Python centralizada no diagrama
+> Nas laterais são os extremos do sistema, o Banco de Dados a esquerda e o Browser do cliente a direita
+> Também podemos ver os meios de comunição entre elas, reparem que possuímos 3 tipos de rotas entre o servidor e cliente, qualquer dúvida explicamos os detalhes ao finalizar a apresentação
+> A seguir vamos análisar o Modelo Entidade Relacionamento do Banco de dados.
+
+**[SLIDE 6 — Banco de dados (DER)]**
+```
+  users ──<  match_players  >── matches        (N:N — 2 jogadores por partida, papel X/O)
+  users ──<  moves          >── matches        (cada jogada: quem, qual partida, posição 0–8)
+  users ──<  messages       >── users          (chat: remetente → destinatário)
+
+  matches guarda o ESTADO do jogo: status · board (vetor de 9) · turno atual · vencedor
+
+  Legenda:  A ──< B  =  um A tem vários B (1:N)        A ──< J >── B  =  relação N:N pela tabela J
+```
+- 5 tabelas: **users · matches · match_players · moves · messages**
+
+FALA: 
+> Como podemos ver possuimos 5 tabelas sendo elas os usuarios, as partidas, a relação entre jogador e cada partida, as jogadas de cada jogador e por último as mensagens enviadas por chat
 
 **[SLIDE 4 — Organização do código + bibliotecas]**
 ```
@@ -84,75 +124,8 @@ templates/       → páginas HTML (Jinja2)
 ```
 - Libs principais: FastAPI, SQLAlchemy, websockets, python-jose (JWT), passlib/bcrypt, Jinja2, GSAP
 
-FALA:
-> "Eu vou listar as tecnologias. No **back-end** usamos **Python** com o framework **FastAPI**, e a
-> comunicação em tempo real é feita por **WebSockets**.
->
-> O **banco de dados** é **PostgreSQL**. A gente não escreve SQL na mão: usa o **SQLAlchemy**, que
-> traduz objetos Python em tabelas, e o **Alembic** pra versionar a estrutura do banco.
->
-> O **login** usa **JWT** — um token guardado num cookie — e a senha nunca é salva em texto: passa
-> por **bcrypt**.
->
-> No **front-end**, as páginas são montadas com **Jinja2**, o visual é **Tailwind**, e as animações
-> do tabuleiro — o X e o O sendo desenhados — usam **GSAP com SVG**. E um ponto importante: o nosso
-> **JavaScript é puro, escrito do zero, sem nenhum framework**.
->
-> Sobre a **organização** (slide): separamos bem as responsabilidades — `routes/` são as páginas e a
-> API, `ws/` é o tempo real, `services/` são as regras, e o **módulo** `game/logic.py` é o
-> **algoritmo do jogo** — esse é o tema central, que a Pessoa 4 vai abrir. Passo pro/pra
-> **[Pessoa 3]**."
-
----
-
-## PESSOA 3 — Arquitetura + Banco (~3 min)
-
-> Objetivo: mostrar **como o sistema é organizado** (diagrama) e a **estrutura do banco** (DER).
-> Deixar o "como uma jogada funciona" para a Pessoa 4.
-
-**[SLIDE 5 — Diagrama de arquitetura]** (banco à esquerda · servidor no meio · navegador à direita)
-```
-   ┌──────────────┐        ┌───────────────────────────┐         ┌────────────────────┐
-   │  PostgreSQL  │◄─ SQL ─►│   SERVIDOR — FastAPI      │         │     NAVEGADOR      │
-   │   (banco)    │ Alchemy │   (Python)                │◄─ Jinja2/HTML ─┤  (cliente)         │
-   │              │(asyncpg)│  rotas · API · serviços   │   (páginas)    │  HTML · Tailwind   │
-   │  5 tabelas   │         │  game/logic.py · WebSocket│◄─ API (JSON) ──►│  JS puro · GSAP    │
-   │              │         │                           │◄─ WebSocket ──►│  hub.js · match.js │
-   └──────────────┘        └───────────────────────────┘  (tempo real)  └────────────────────┘
-       (esquerda)                    (meio)                                   (direita)
-```
-- O cliente conversa com o servidor por **3 canais**: páginas **Jinja2/HTML**, **API (JSON)** e **WebSocket** (tempo real)
-
-**[SLIDE 6 — Banco de dados (DER)]**
-```
-  users ──<  match_players  >── matches        (N:N — 2 jogadores por partida, papel X/O)
-  users ──<  moves          >── matches        (cada jogada: quem, qual partida, posição 0–8)
-  users ──<  messages       >── users          (chat: remetente → destinatário)
-
-  matches guarda o ESTADO do jogo: status · board (vetor de 9) · turno atual · vencedor
-
-  Legenda:  A ──< B  =  um A tem vários B (1:N)        A ──< J >── B  =  relação N:N pela tabela J
-```
-- 5 tabelas: **users · matches · match_players · moves · messages**
-
-FALA:
-> "Agora, como o sistema é organizado. Olhando o diagrama da esquerda pra direita: na **esquerda**
-> fica o **banco PostgreSQL**; no **meio**, o **servidor FastAPI**, que tem as rotas, a API, os
-> serviços com as regras e o tempo real; e na **direita**, o **navegador**, que é o que o jogador
-> vê.
->
-> O navegador conversa com o servidor por **três canais**: as **páginas HTML**, montadas pelo
-> Jinja2; a **API**, que troca dados em **JSON** — por exemplo, pra buscar jogadores ou enviar um
-> convite; e o **WebSocket**, que é um canal que fica **aberto o tempo todo** nos dois sentidos — é
-> isso que dá o **tempo real**. E o servidor fala com o banco pelo **SQLAlchemy**.
->
-> Sobre o **banco** (slide 6), são **5 tabelas**. A `users` são os jogadores. A `matches` guarda o
-> **estado de cada partida** — inclusive o tabuleiro. Como uma partida tem **dois** jogadores, a
-> gente usa a tabela `match_players` no meio, que também guarda o papel de cada um, X ou O. A
-> `moves` registra **cada jogada** feita, e a `messages` guarda o **chat** entre os jogadores.
->
-> Com essa estrutura no lugar, passo pro/pra **[Pessoa 4]**, que vai mostrar o que o sistema faz e,
-> principalmente, **como o algoritmo funciona**."
+> Por fim, esse é o slide da nossa organização de pastas adotada no sistema
+> Agora o Victor vai finalizar abordando as funcionalidades do sistema com enfase na solução do algoritmo do jogo da velha.
 
 ---
 
@@ -180,8 +153,18 @@ FALA:
 ```
 - Decisão-chave: **uma lista de 9 posições (0 a 8)** em vez de uma matriz 3×3 → simplifica tudo
 
+FALA:
+> Boa noite, sou o Victor e as nossas funcionalidades desenvolvidas no sistema foram um fluxo simples de cadastro e login, um dashboard servindo como hub para jogadores onlines, um chat integrado para comunicação entre eles e a tela de partida entre jogadores com escolha de quem vai ser o X ou o Circulo, que define quem começa.
+> Nosso sistema funciona integralmente em tempo real com uso do protocolo WebSocket estabelecendo comunicação entre Servidor e Cliente
+
 **[SLIDE 9 — O algoritmo de vitória (`game/logic.py`)]**
 ```python
+board = [
+  "X",  "O",  "O",  # 0, 1, 2
+  None, "X",  None, # 3, 4, 5
+  None, None, "X"   # 6, 7, 8
+]
+
 _WIN_LINES = [
     (0,1,2), (3,4,5), (6,7,8),   # 3 linhas
     (0,3,6), (1,4,7), (2,5,8),   # 3 colunas
@@ -198,34 +181,14 @@ def is_draw(board):
     return all(cell is not None for cell in board)
 ```
 
-**[SLIDE 10 — As regras (validação no servidor)]**
-- Antes de aceitar a jogada, o servidor confere: **é a vez?** · partida **ativa?** · casa **vazia?** · jogador tem **papel?**
-- Só então: marca a casa → checa vitória/empate → **passa o turno** → salva
-- **Trava no banco** evita problema se os dois clicarem ao mesmo tempo
-
 FALA:
-> "Eu vou falar do que o sistema faz e, principalmente, do **algoritmo**.
->
-> Rápido nas **funcionalidades**: você se cadastra, vê **quem está online ao vivo**, **convida**
-> alguém, escolhem **X ou O**, **jogam em tempo real**, o sistema detecta **vitória ou velha**, e dá
-> pra **conversar no chat**. E o **caminho de uma jogada** é esse: eu clico numa casa, o servidor
-> **valida** se é a minha vez e se a casa está vazia, o algoritmo confere se alguém ganhou, salva, e
-> **transmite pros dois jogadores**. Importante: **quem decide é o servidor**, o navegador só
-> desenha.
->
-> Agora o coração (slide 8). A decisão principal é **como representar o tabuleiro**: em vez de uma
-> matriz 3×3, usamos **uma lista de 9 posições, de 0 a 8**, onde cada casa guarda `X`, `O` ou vazio.
->
-> Por que isso ajuda? Olhem o algoritmo (slide 9). Existem **só 8 jeitos de ganhar**: 3 linhas, 3
-> colunas e 2 diagonais. A gente escreve essas 8 combinações como trios de índices nessa lista
-> `_WIN_LINES`. A função `check_winner` **percorre as 8** e pergunta: *'a casa está preenchida e as
-> três são iguais?'*. Se forem, devolve quem ganhou; senão, `None`. São **no máximo 8 verificações**
-> — rápido e constante. O empate é direto: se as **9 casas estão preenchidas** e ninguém ganhou, deu
-> velha.
->
-> E pra ninguém trapacear, toda jogada passa por uma **validação no servidor** (slide 10): é a
-> **vez** dele? a casa está **vazia**? Só então a jogada vale. Devolvo pro/pra **[Pessoa 1]**."
-
+> Agora aprofundando no tema principal do projeto, esse slide mostra a solução do algoritmo em python com matrizes do jogo da velha.
+> Já pensaram como verificar quem venceu ou se deu empate nesse jogo?
+> Ná prática é fácil, formamos uma sequência de 3 símbolos iguais, porém, na implementação dessa validação precisamos verificar cada possibilidade de vitória.
+> Podemos visualizar isso sendo realizado nos elementos desse código
+> Em primeiro lugar temos a representação do tabuleiro em uma lista e suas posições de jogada
+> depois cada combinação de vitória possível entre as posições preenchidas
+> depois são as funções que verificam cada combinação com o estado atual do tabuleiro ou se deu empate
 ---
 
 ## PESSOA 1 (VOCÊ) — Fechamento (~3 min)
@@ -234,19 +197,8 @@ FALA:
 > espaços e algumas sugestões de tópicos que você pode usar.
 
 **[SLIDE 11 — Demonstração ao vivo]**
-- Abrir o jogo em **2 abas/janelas** e jogar uma partida rápida (~30–60s)
-- Mostrar: convite → escolha de X/O → jogadas sincronizadas → vitória/velha → (chat, se der tempo)
-- **Plano B:** GIF/vídeo curto gravado antes (caso a internet falhe)
-
-**[SLIDE 12 — Conclusão]** *(a ser escrita por você)*
-- Espaço reservado para o seu fechamento
-- Tópicos opcionais que você pode incluir: hospedagem na nuvem · futuro (ex.: oponente de IA com
-  algoritmo **Minimax**, revanche, ranking)
-
-FALA (fechamento):
-> "Pra fechar, deixa eu **mostrar o jogo funcionando**." → *(fazer a demonstração)*
->
-> *(conclusão — a ser escrita por você)*
+- Obrigado
+- nomes do integrantes
 
 ---
 
