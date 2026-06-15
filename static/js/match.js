@@ -75,6 +75,34 @@ function setupPlayerPanels(roles) {
     }
 }
 
+const BUBBLE_EDGE_PAD = 8;     // px gap kept from the screen edge
+const CARET_INSET     = 12;    // keep the caret off the bubble's rounded corners
+
+// Keep an avatar-anchored bubble fully on-screen. Returns dx (px) to add to the
+// bubble's translateX so it clears the viewport edge, and shifts the caret by -dx
+// so it keeps pointing at the avatar even when the bubble body is pushed sideways.
+function clampMatchBubble(bubble) {
+    const slot = bubble.parentElement;                 // player-slot-x/o (relative)
+    const slotRect = slot.getBoundingClientRect();
+    const anchorCenterX = slotRect.left + slotRect.width / 2;   // ~avatar center
+    const width = bubble.offsetWidth;                  // transform-independent
+    const half  = width / 2;
+
+    const desiredLeft = anchorCenterX - half;          // centered on the avatar
+    const minLeft = BUBBLE_EDGE_PAD;
+    const maxLeft = window.innerWidth - width - BUBBLE_EDGE_PAD;
+    const clampedLeft = Math.max(minLeft, Math.min(desiredLeft, maxLeft));
+    const dx = clampedLeft - desiredLeft;              // 0 when no clamp is needed
+
+    const caret = bubble.querySelector("[data-bubble-caret]");
+    if (caret) {
+        const limit = Math.max(0, half - CARET_INSET);
+        const caretOffset = Math.max(-limit, Math.min(-dx, limit));
+        caret.style.transform = `translateX(-50%) translateX(${caretOffset}px)`;
+    }
+    return dx;
+}
+
 function showMatchMessageBubble(data) {
     const role = currentRoles[data.sender_id];
     if (!role) return;
@@ -92,22 +120,24 @@ function showMatchMessageBubble(data) {
     const wasHidden = bubble.classList.contains("hidden");
     bubble.classList.remove("hidden");
 
+    const dx = clampMatchBubble(bubble);
+
     if (typeof gsap !== "undefined") {
         gsap.killTweensOf(bubble);
         gsap.fromTo(
             bubble,
-            { xPercent: -50, opacity: wasHidden ? 0 : 1, scale: wasHidden ? 0.82 : 1, y: wasHidden ? 10 : 0 },
-            { xPercent: -50, opacity: 1, scale: 1, y: 0, duration: 0.32, ease: "back.out(1.7)" }
+            { xPercent: -50, x: dx, opacity: wasHidden ? 0 : 1, scale: wasHidden ? 0.82 : 1, y: wasHidden ? 10 : 0 },
+            { xPercent: -50, x: dx, opacity: 1, scale: 1, y: 0, duration: 0.32, ease: "back.out(1.7)" }
         );
     } else {
-        bubble.style.transform = "translateX(-50%)";
+        bubble.style.transform = `translateX(-50%) translateX(${dx}px)`;
     }
 
     msgBubbleTimers[role] = setTimeout(() => {
         msgBubbleTimers[role] = null;
         if (typeof gsap !== "undefined") {
             gsap.to(bubble, {
-                xPercent: -50, opacity: 0, scale: 0.88, y: 6, duration: 0.22, ease: "power2.in",
+                xPercent: -50, x: dx, opacity: 0, scale: 0.88, y: 6, duration: 0.22, ease: "power2.in",
                 onComplete: () => bubble.classList.add("hidden"),
             });
         } else {
