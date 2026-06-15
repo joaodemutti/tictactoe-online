@@ -39,6 +39,11 @@ function ensureNotificationAudio() {
 function primeNotificationAudio() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
+    // iOS: route to the 'playback' category so the chime is NOT muted by the
+    // physical ring/silent switch (Web Audio defaults to 'ambient', which is).
+    if (navigator.audioSession) {
+        try { navigator.audioSession.type = 'playback'; } catch (_) {}
+    }
     if (!notificationAudioCtx) notificationAudioCtx = new AudioCtx();
     const ctx = notificationAudioCtx;
     const playSilence = () => {
