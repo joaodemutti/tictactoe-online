@@ -1,6 +1,16 @@
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 
 const matchWs = createReconnectingWs(`/ws/match/${MATCH_ID}`, {
+    terminalCloseCodes: [1000, 1008, 4001, 4003, 4004, 4403],
+    onterminal(code) { onMatchTerminalClose(code); },
+    onopen() {
+        // The server re-pushes authoritative board_state on every (re)connect.
+        // Block local input until it arrives so we never act on stale module state
+        // (a move/game_over may have been missed while disconnected). Mirrors the
+        // hub re-syncing in its onopen.
+        awaitingSync = true;
+        waitingOfflineCheckReady = false;   // presence snapshot will be re-pushed too
+    },
     onmessage(data) {
         if (data.type === "board_state")    onBoardState(data);
         if (data.type === "player_joined")  onPlayerJoined(data);
@@ -30,6 +40,15 @@ let waitingOfflineTimer = null;
 let waitingOfflineCheckReady = false;
 let selectedRole = null;
 let pendingRoleSelections = {};
+let awaitingSync = false;                // true between a (re)connect and the next authoritative board_state
+
+function onMatchTerminalClose(code) {
+    if (code === 4001 || code === 4403 || code === 1008) {
+        location.href = "/login";        // auth/origin/policy — re-authenticate
+        return;
+    }
+    location.href = "/";                  // 4003/4004/1000 — match is gone, return to hub
+}
 const onlinePlayerIds = new Set();
 const playingPlayerIds = new Set();
 const msgBubbleTimers = {};              // role → timeout id
@@ -169,9 +188,10 @@ function onCellClick(e) {
     if (board[index] !== null || gameOver) return;
     if (currentTurn !== CURRENT_USER_ID) return;
     if (!myRole) return;
+    if (awaitingSync) return;            // waiting on authoritative state — don't act on stale board
 
-    if (matchWs && matchWs.readyState === WebSocket.OPEN) {
-        matchWs.send(JSON.stringify({ type: "move", position: index }));
+    if (!matchWs.send(JSON.stringify({ type: "move", position: index }))) {
+        wsToast(t('ws_offline_action'));
     }
 }
 
@@ -282,6 +302,7 @@ function onPlayersOnline(data) {
 }
 
 function onBoardState(data) {
+    awaitingSync = false;                // authoritative state received — input unblocked
     board = data.board;
     pendingRoleSelections = data.selections || {};
     const rolesSet = data.roles && Object.values(data.roles).some(r => r !== null);
@@ -321,6 +342,7 @@ function onRoleSelected(data) {
 }
 
 function onGameStart(data) {
+    awaitingSync = false;
     clearCountdown();
     myRole      = data.roles[CURRENT_USER_ID];
     currentTurn = data.current_turn;
@@ -437,10 +459,12 @@ function getRoleBubbleText(role) {
 const BADGE_LABELS = { x: "X", o: "O", random: "?" };
 
 function selectRole(role) {
-    if (!matchWs || matchWs.readyState !== WebSocket.OPEN) return;
     const unselect = selectedRole === role;
+    if (!matchWs.send(JSON.stringify({ type: "role_select", role, unselect }))) {
+        wsToast(t('ws_offline_action'));
+        return;
+    }
     selectedRole = unselect ? null : role;
-    matchWs.send(JSON.stringify({ type: "role_select", role, unselect }));
 
     // Optimistic button highlight
     document.querySelectorAll(".role-btn").forEach(b => {
@@ -559,8 +583,10 @@ function sendMatchChatMessage() {
     const input = document.getElementById("match-chat-input");
     const content = input.value.trim();
     if (!content) return;
-    if (!matchWs || matchWs.readyState !== WebSocket.OPEN) return;
-    matchWs.send(JSON.stringify({ type: "send_message", receiver_id: opponent.user_id, content }));
+    if (!matchWs.send(JSON.stringify({ type: "send_message", receiver_id: opponent.user_id, content }))) {
+        wsToast(t('ws_offline_action'));
+        return;
+    }
     input.value = "";
 }
 

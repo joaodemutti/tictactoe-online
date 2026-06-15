@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}{{ _('page_title') }}{% endblock %}</title>
     <script>
-        const LANG = {{ lang | default('en') | tojson }};
+        const LANG = {{ lang | default ('en') | tojson }};
         const I18N = {{ i18n | tojson }};
         function t(key, vars) {
             let s = I18N[key] !== undefined ? I18N[key] : key;
@@ -29,7 +29,9 @@
     {% block head %}{% endblock %}
     <style>
         /* Prevent iOS auto-zoom on input focus (triggered when font-size < 16px) */
-        input, textarea, select {
+        input,
+        textarea,
+        select {
             font-size: 16px !important;
         }
 
@@ -37,15 +39,18 @@
         #thread-messages::-webkit-scrollbar {
             width: 4px;
         }
+
         #contacts-view::-webkit-scrollbar-track,
         #thread-messages::-webkit-scrollbar-track {
             background: transparent;
         }
+
         #contacts-view::-webkit-scrollbar-thumb,
         #thread-messages::-webkit-scrollbar-thumb {
             background: #374151;
             border-radius: 9999px;
         }
+
         #contacts-view::-webkit-scrollbar-thumb:hover,
         #thread-messages::-webkit-scrollbar-thumb:hover {
             background: #4b5563;
@@ -130,6 +135,7 @@
             </div>
             <div id="thread-invite-slot"
                 class="pointer-events-none absolute left-0 right-0 bottom-[4.35rem] z-0 flex justify-center px-5">
+                <span id="game-summary-text" class="text-[11px] text-gray-600 select-none"></span>
                 <button id="thread-invite-btn" type="button" onclick="sendThreadInvite()" class="hidden pointer-events-auto w-36 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 rounded-lg
                                text-xs font-semibold shadow-lg shadow-sky-950/40 transition-colors">
                     {{ _('btn_invite_to_game') }}
@@ -137,27 +143,25 @@
             </div>
             <div class="relative z-10 flex gap-2 px-3 pt-3 pb-3 border-t border-gray-800 bg-gray-900 shrink-0">
                 <!-- Emoji picker panel -->
-                <div id="chat-emoji-picker"
-                     class="hidden absolute bottom-full left-3 right-3 z-50 mb-1
+                <div id="chat-emoji-picker" class="hidden absolute bottom-full left-3 right-3 z-50 mb-1
                             bg-gray-900 border border-gray-700 rounded-2xl p-2 shadow-2xl
                             grid grid-cols-8 gap-0.5">
                     {% set emojis = ['😀','😂','🤣','😅','😊','😍','🥰','😎',
-                                      '😭','😤','😡','🤯','😱','🥳','😴','🤔',
-                                      '👍','👎','👏','🙌','🤝','🙏','💪','✌️',
-                                      '❤️','🔥','💀','👀','💯','🎉','⚡','💥',
-                                      '😈','🤡','👻','🐷','🐸','🦆','🐢','🐧',
-                                      '🍕','🍔','☕','🍺','🏆','🎮','⚽','🎯'] %}
+                    '😭','😤','😡','🤯','😱','🥳','😴','🤔',
+                    '👍','👎','👏','🙌','🤝','🙏','💪','✌️',
+                    '❤️','🔥','💀','👀','💯','🎉','⚡','💥',
+                    '😈','🤡','👻','🐷','🐸','🦆','🐢','🐧',
+                    '🍕','🍔','☕','🍺','🏆','🎮','⚽','🎯'] %}
                     {% for e in emojis %}
                     <button type="button" onclick="appendChatEmoji('{{ e }}')"
-                            class="text-xl p-1 rounded-lg hover:bg-gray-700 transition-colors leading-none">
+                        class="text-xl p-1 rounded-lg hover:bg-gray-700 transition-colors leading-none">
                         {{ e }}
                     </button>
                     {% endfor %}
                 </div>
 
                 <!-- Emoji toggle button -->
-                <button type="button" id="chat-emoji-btn" onclick="toggleChatEmojiPicker()"
-                        class="text-xl px-2 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl
+                <button type="button" id="chat-emoji-btn" onclick="toggleChatEmojiPicker()" class="text-xl px-2 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl
                                transition-colors shrink-0 leading-none">
                     😀
                 </button>

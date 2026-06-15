@@ -228,6 +228,7 @@ function closeDrawer() {
 
 function showContactsView() {
     activeContact = null;
+    document.getElementById('game-summary-text')?.classList.add('hidden');
     document.getElementById('contacts-view').classList.remove('hidden');
     document.getElementById('thread-view').classList.add('hidden');
     updateDrawerTitle();
@@ -252,6 +253,8 @@ async function openThread(userId, username) {
 
     const thread = document.getElementById('thread-messages');
     thread.innerHTML = '';
+    document.getElementById('game-summary-text')?.classList.add('hidden');
+    positionInviteSlot();
 
     let threadGames = [];
     try {
@@ -343,8 +346,9 @@ function appendGameResult(game, animate = true) {
 }
 
 function appendGameSummary(games) {
-    if (!games.length) return;
-    const thread = document.getElementById('thread-messages');
+    const text = document.getElementById('game-summary-text');
+    if (!text) return;
+
     let wins = 0, losses = 0, draws = 0;
     games.forEach(g => {
         if (!g.winner_id) draws++;
@@ -355,13 +359,43 @@ function appendGameSummary(games) {
     if (wins) parts.push(wins === 1 ? t('stat_win') : t('stat_wins', { n: wins }));
     if (losses) parts.push(losses === 1 ? t('stat_loss') : t('stat_losses', { n: losses }));
     if (draws) parts.push(draws === 1 ? t('stat_draw') : t('stat_draws', { n: draws }));
-    const el = document.createElement('div');
-    el.id = 'game-summary';
-    el.className = 'flex justify-center mt-3 mb-1';
-    el.innerHTML = `
-        <span class="text-[11px] text-gray-600 select-none">${parts.join(' · ')}</span>
-    `;
-    thread.appendChild(el);
+
+    if (parts.length) {
+        text.textContent = parts.join(' · ');
+        text.classList.remove('hidden');
+    } else {
+        text.textContent = '';
+        text.classList.add('hidden');
+    }
+    positionInviteSlot();
+}
+
+function positionInviteSlot() {
+    let invite = document.getElementById('thread-invite-btn')?.classList.contains("hidden");
+    let summary = document.getElementById('game-summary-text')?.classList.contains("hidden");
+    let thread = document.getElementById('thread-messages');
+
+    if (invite && summary) {
+        thread?.classList.add('pb-16');
+        thread?.classList.remove('pb-14');
+        thread?.classList.remove('pb-2');
+    }
+    else if (invite) {
+        thread?.classList.add('pb-14');
+        thread?.classList.remove('pb-16');
+        thread?.classList.remove('pb-2');
+    }
+    else if (summary) {
+        thread?.classList.add('pb-2');
+        thread?.classList.remove('pb-16');
+        thread?.classList.remove('pb-14');
+    }
+    else {
+        thread?.classList.add('pb-16');
+        thread?.classList.remove('pb-14');
+        thread?.classList.remove('pb-2');
+    }
+
 }
 
 function appendInviteCard(invite, userId, animate = true) {
@@ -413,7 +447,7 @@ function showThreadInviteButton(btn) {
     if (btn.dataset.visible === 'true') return;
     btn.dataset.visible = 'true';
     btn.classList.remove('hidden');
-    document.getElementById('thread-messages')?.classList.add('pb-14');
+    positionInviteSlot();
 
     if (typeof gsap === 'undefined') return;
     gsap.killTweensOf(btn);
@@ -427,14 +461,14 @@ function showThreadInviteButton(btn) {
 function hideThreadInviteButton(btn) {
     if (btn.dataset.visible !== 'true') {
         btn.classList.add('hidden');
-        document.getElementById('thread-messages')?.classList.remove('pb-14');
+        positionInviteSlot();
         return;
     }
     btn.dataset.visible = 'false';
 
     if (typeof gsap === 'undefined') {
         btn.classList.add('hidden');
-        document.getElementById('thread-messages')?.classList.remove('pb-14');
+        positionInviteSlot();
         return;
     }
 
@@ -447,7 +481,7 @@ function hideThreadInviteButton(btn) {
         ease: 'power2.in',
         onComplete: () => {
             btn.classList.add('hidden');
-            document.getElementById('thread-messages')?.classList.remove('pb-14');
+            positionInviteSlot();
         },
     });
 }
@@ -526,8 +560,10 @@ function sendChatMessage() {
     const content = input.value.trim();
     if (!content) return;
     const ws = getActiveWs();
-    if (!ws) return;
-    ws.send(JSON.stringify({ type: 'send_message', receiver_id: activeContact.user_id, content }));
+    if (!ws || !ws.send(JSON.stringify({ type: 'send_message', receiver_id: activeContact.user_id, content }))) {
+        wsToast(t('ws_offline_action'));
+        return;
+    }
     input.value = '';
 }
 

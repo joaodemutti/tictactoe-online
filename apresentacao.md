@@ -1,43 +1,17 @@
-# Apresentação — Tic-Tac-Toe Online
-
-## Contexto
-
-Projeto acadêmico do **1º semestre de ADS**, matéria **Lógica de Programação**. É um **jogo da
-velha multiplayer online, em tempo real**, com banco de dados, login e chat. O foco do trabalho é a
-**lógica**: a forma de representar o tabuleiro e o algoritmo que decide vitória/empate.
-
-Apresentação falada por **4 pessoas em ~13–14 min**. A **pessoa 1 (você)** abre e fecha (partes não
-técnicas); **pessoas 2, 3 e 4** cobrem a parte técnica na ordem **Stack → Arquitetura →
-Funcionalidades + Algoritmo** (funil do geral ao específico, terminando no algoritmo — o tema da
-matéria — como clímax antes da conclusão).
-
-> Este arquivo **é a apresentação**: para cada pessoa há o conteúdo do slide (tópicos) + o roteiro
-> do que falar (`FALA:`) + o tempo. Os blocos `FALA:` são um guia, não precisa decorar.
-
-## Divisão e tempo
-
-| # | Quem | Parte | Slides | Tempo |
-|---|------|-------|--------|-------|
-| 1 | **Você** | Abertura: Introdução · Escopo · Tema · Roteiro | 1–2 | ~2,0 min |
-| 2 | Pessoa 2 | Stack & Tecnologias (+ pastas e libs) | 3–4 | ~2,0 min |
-| 3 | Pessoa 3 | Arquitetura (diagrama) + Banco (DER) | 5–6 | ~3,0 min |
-| 4 | Pessoa 4 | **Funcionalidades + Algoritmo ★** | 7–10 | ~4,0 min |
-| 1 | **Você** | Fechamento: Demonstração ao vivo + Conclusão | 11–12 | ~3,0 min |
-| | | **Total** | **12 slides** | **~14 min** |
-
----
+# Apresentação — Jogo da Velha Online
 
 ## PESSOA 1 (VOCÊ) — Abertura (~2 min)
 
 **[SLIDE 1 — Capa]**
-- Título: **Tic-Tac-Toe Online — Jogo da Velha Multiplayer em Tempo Real**
-- Nomes dos 4 integrantes · Disciplina: Lógica de Programação · ADS – 1º semestre
 
-**[SLIDE 2 — Introdução / Tema / Roteiro]**
-- O que é: jogo da velha jogado por 2 pessoas pela internet, ao vivo
-- Tema central: **representação do tabuleiro e o algoritmo que decide o jogo**
-- Escopo: login → ver quem está online → convidar → jogar em tempo real → chat
-- **Roteiro de hoje** (quem fala o quê): Tecnologias · Arquitetura+Banco · Funcionalidades+Algoritmo · Demonstração
+CLAUDE PRECISO DISPNIBILIZAR O QR CODE E  O LINK NO PRIMEIRO OU SEGUNDO SLIDE
+
+COLOQUE O QRCODE E LINK NO CANTO SUPERIOR EM TODOS OS SLIDES SEM ATRAPALHAR A DISPOSIÇÃO DO CONTEÚDO
+
+LINK: https://jogodavelha-online.com.br
+
+QRCODE: TEXT PURO DO LINK
+...
 
 FALA:
 > Boa noite, sou o João integrante de um grupo composto por 4 pessoas, sendo eles Kauan, Lucas e Victor.
@@ -47,6 +21,7 @@ FALA:
 > A seguir o Kauan vai abordar a Stack e Tecnologias Utilizadas, depois o Lucas vai relatar nossa arquitetura do sistema, finalizando com o Victor explicando as funcionalidades com enfase na solução do algoritmo do jogo da velha utilizando matrizes em python.
 > Kauan, pode seguir por favor.
 
+
 ---
 
 ## PESSOA 2 — Stack & Tecnologias (~2 min)
@@ -54,10 +29,12 @@ FALA:
 > Objetivo: **só citar/listar** as tecnologias e a organização do código.
 
 **[SLIDE 3 — Stack]**
-- **Back-end:** Python · **FastAPI** · Uvicorn · WebSockets
+- **Back-end:** Python · **FastAPI** · WebSockets
 - **Banco de dados:** **PostgreSQL** · SQLAlchemy (ORM async) + · Alembic (migrações)
 - **Autenticação:** JWT em cookie . (hash de senha)
-- **Front-end:** **Jinja2** (HTML) . **JavaScript puro (sem framework)**
+- **Front-end:** **Jinja2** (HTML,CSS,JS) . **JavaScript puro (sem framework)**
+
+- Libs principais: FastAPI, SQLAlchemy, websockets, python-jose (JWT), passlib/bcrypt, Jinja2, GSAP
 
 FALA:
 > Boa noite, sou Kauan e nossa Stack adotada para projetar o sistema foi a seguinte:
@@ -74,7 +51,9 @@ FALA:
 > Deixar o "como uma jogada funciona" para a Pessoa 4.
 
 
-**[SLIDE 5 — Diagrama de arquitetura]** (banco à esquerda · servidor no meio · navegador à direita)
+**[SLIDE 4 — Diagrama de arquitetura]** (banco à esquerda · servidor no meio · navegador à direita)
+
+CLAUDE FAVOR FAZER O DIAGRAMA COM O MOTOR GRAFICO Q VC TIVER 
 ```
    ┌──────────────┐        ┌───────────────────────────┐         ┌────────────────────┐
    │  PostgreSQL  │◄─ SQL ─►│   SERVIDOR — FastAPI      │         │     NAVEGADOR      │
@@ -91,10 +70,13 @@ FALA:
 > Boa noite, sou o Lucas e nesse slide podemos visualizar a arquitetura funcional do nosso sistema.
 > Como podemos ver ela possui 3 camadas, a princpal camada oquestradora é o servidor FastAPI em Python centralizada no diagrama
 > Nas laterais são os extremos do sistema, o Banco de Dados a esquerda e o Browser do cliente a direita
-> Também podemos ver os meios de comunição entre elas, reparem que possuímos 3 tipos de rotas entre o servidor e cliente, qualquer dúvida explicamos os detalhes ao finalizar a apresentação
+> Também podemos ver os meios de comunição entre elas, reparem que possuímos 3 tipos de rotas entre o servidor e cliente
 > A seguir vamos análisar o Modelo Entidade Relacionamento do Banco de dados.
 
-**[SLIDE 6 — Banco de dados (DER)]**
+**[SLIDE 5 — Banco de dados (DER)]**
+
+CLAUDE FAVOR FAZER O DER COM MOTOR GRAFICO Q VC TIVER DISPONIVEL
+
 ```
   users ──<  match_players  >── matches        (N:N — 2 jogadores por partida, papel X/O)
   users ──<  moves          >── matches        (cada jogada: quem, qual partida, posição 0–8)
@@ -109,7 +91,10 @@ FALA:
 FALA: 
 > Como podemos ver possuimos 5 tabelas sendo elas os usuarios, as partidas, a relação entre jogador e cada partida, as jogadas de cada jogador e por último as mensagens enviadas por chat
 
-**[SLIDE 4 — Organização do código + bibliotecas]**
+**[SLIDE 7 — Organização do código + bibliotecas]**
+
+CLAUDE AQUI DEVE SER UM BLOCO DE CÓDIGO ``` E NAO TEXTO PURO
+
 ```
 app/
   main.py        → inicia o app e conecta as rotas
@@ -122,7 +107,6 @@ app/
 static/js/       → JavaScript do navegador (hub.js, match.js)
 templates/       → páginas HTML (Jinja2)
 ```
-- Libs principais: FastAPI, SQLAlchemy, websockets, python-jose (JWT), passlib/bcrypt, Jinja2, GSAP
 
 > Por fim, esse é o slide da nossa organização de pastas adotada no sistema
 > Agora o Victor vai finalizar abordando as funcionalidades do sistema com enfase na solução do algoritmo do jogo da velha.
@@ -134,30 +118,18 @@ templates/       → páginas HTML (Jinja2)
 > **Tema principal.** Começa rápido pelas funcionalidades + o fluxo de uma jogada, e concentra o
 > tempo no algoritmo de `game/logic.py` e na validação.
 
-**[SLIDE 7 — Funcionalidades + como uma jogada acontece]**
-- O que o sistema faz: login · ver **jogadores online** ao vivo · **convidar** · escolher **X/O** · **jogar em tempo real** · detectar **vitória/empate** · **chat**
-- Caminho de uma jogada:
-  1. Jogador **clica** numa casa → navegador envia a posição pelo WebSocket
-  2. Servidor **valida** (é a vez dele? casa vazia?) → aplica
-  3. `game/logic.py` checa **vitória/empate** → salva no banco
-  4. Servidor **transmite pros dois** jogadores → ambos **desenham** X/O (GSAP)
-- **Quem decide é sempre o servidor** — o navegador só desenha
+**[SLIDE 7 — Funcionalidades]**
 
-**[SLIDE 8 — A ideia central: o tabuleiro é um vetor de 9]**
-```
-índices:      0 | 1 | 2        cada casa guarda:  "X"  ·  "O"  ·  None (vazia)
-            -----------
-              3 | 4 | 5        Ex.: ["X", None,"O",
-            -----------               None,"X", None,
-              6 | 7 | 8               "O", None,"X"]   → diagonal 0-4-8 = X venceu
-```
-- Decisão-chave: **uma lista de 9 posições (0 a 8)** em vez de uma matriz 3×3 → simplifica tudo
+CLAUDE COLOQUE PRINT DA TELA DO TABULEIRO DO JOGO QUE VOU ANEXAR NO CHAT NESSE SLIDE
 
 FALA:
 > Boa noite, sou o Victor e as nossas funcionalidades desenvolvidas no sistema foram um fluxo simples de cadastro e login, um dashboard servindo como hub para jogadores onlines, um chat integrado para comunicação entre eles e a tela de partida entre jogadores com escolha de quem vai ser o X ou o Circulo, que define quem começa.
 > Nosso sistema funciona integralmente em tempo real com uso do protocolo WebSocket estabelecendo comunicação entre Servidor e Cliente
 
 **[SLIDE 9 — O algoritmo de vitória (`game/logic.py`)]**
+
+CLAUDE ESSE SLIDE TEMQ SER O BLOCO DE CODIGO EM PYTHON ```python
+
 ```python
 board = [
   "X",  "O",  "O",  # 0, 1, 2
@@ -197,25 +169,9 @@ FALA:
 > espaços e algumas sugestões de tópicos que você pode usar.
 
 **[SLIDE 11 — Demonstração ao vivo]**
-- Obrigado
+- Obrigado (CALUDE MELHORE ESSA FRASE)
 - nomes do integrantes
 
 ---
 
-## Dicas de ensaio
-- **Cronometrar** 1 ensaio completo. Se passar de 15 min, corte falas dos slides **4 e 6** (são os
-  mais enxugáveis). O slide do **algoritmo (9) não** deve ser cortado.
-- **Transições**: cada pessoa termina passando a palavra nominalmente pra próxima (já está nas
-  falas) — evita silêncio entre os trechos.
-- **No slide 9**, a Pessoa 4 deve **apontar pra `_WIN_LINES` e pra linha do `if`** enquanto fala — é
-  o momento-chave.
-- **Demonstração**: testar a abertura em 2 abas **antes** da apresentação; ter o GIF/vídeo como
-  plano B.
 
-## Como validar a apresentação
-1. **Confere com o código?** Cada afirmação técnica saiu de: `app/game/logic.py` (algoritmo),
-   `app/services/game_service.py` (validação/turno/trava), `app/ws/` (tempo real), `app/routes/`
-   (páginas + API JSON), `app/models.py` (5 tabelas), `requirements.txt` (libs).
-2. **Tempo**: ensaio cronometrado deve cair em **10–15 min** (alvo ~14).
-3. **Demo**: rodar localmente (`uvicorn app.main:app --reload`), abrir `localhost:8000` em duas abas
-   e confirmar que a partida sincroniza antes de apresentar ao vivo.

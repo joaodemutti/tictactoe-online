@@ -4,6 +4,8 @@ let currentUsername = CURRENT_USERNAME;
 let currentEmail = CURRENT_EMAIL;
 
 const hubWs = createReconnectingWs('/ws/hub', {
+    terminalCloseCodes: [1000, 1008, 4001, 4403],
+    onterminal(code) { onHubTerminalClose(code); },
     onopen() { seenInvites.clear(); loadOngoingMatches(); },
     onmessage(data) {
         if (data.type === "players_online")  onPlayersOnline(data);
@@ -21,6 +23,11 @@ function onPlayersOnline(data) {
         playersOnline = players;
         renderPlayersOnline();
     });
+}
+
+function onHubTerminalClose(code) {
+    if (code === 1000) return;     // clean server-side close — nothing to recover
+    location.href = "/login";      // auth/origin/policy — session is gone, re-authenticate
 }
 
 function onSessionReplaced() {

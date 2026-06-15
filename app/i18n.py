@@ -88,6 +88,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "session_replaced_title": "Connected in another tab",
         "session_replaced_body": "You opened this page in another tab. Only one session is allowed at a time.",
         "btn_reload": "Reload",
+        "ws_reconnecting": "Reconnecting…",
+        "ws_offline_action": "Not connected — reconnecting…",
     },
     "pt-BR": {
         "page_title": "Jogo da Velha",
@@ -174,6 +176,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "session_replaced_title": "Conectado em outra aba",
         "session_replaced_body": "Você abriu esta página em outra aba. Apenas uma sessão é permitida por vez.",
         "btn_reload": "Recarregar",
+        "ws_reconnecting": "Reconectando…",
+        "ws_offline_action": "Sem conexão — reconectando…",
     },
 }
 
