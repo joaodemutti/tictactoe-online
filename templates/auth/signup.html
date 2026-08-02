@@ -118,5 +118,25 @@
             }
         });
     </script>
+    {% if site_key %}
+    <script>
+        // iOS Safari freezes page JS when the tab is backgrounded or restored
+        // from the back/forward cache, so Turnstile's auto-refresh timer never
+        // runs and a stale, single-use token gets submitted -> Cloudflare
+        // rejects it as "timeout-or-duplicate". Regenerate a fresh token
+        // whenever the page is resumed.
+        function _resetTurnstile() {
+            if (window.turnstile) {
+                try { window.turnstile.reset(); } catch (e) {}
+            }
+        }
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) _resetTurnstile();
+        });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') _resetTurnstile();
+        });
+    </script>
+    {% endif %}
 </body>
 </html>
