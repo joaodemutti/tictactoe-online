@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -7,6 +8,8 @@ from passlib.context import CryptContext
 from app.config import settings
 
 COOKIE_NAME = "access_token"
+
+_log = logging.getLogger(__name__)
 
 _TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
@@ -34,16 +37,25 @@ def decode_token(token: str) -> str | None:
         return None
 
 
-async def verify_turnstile(token: str, remoteip: str | None) -> bool:
+async def verify_turnstile(token: str) -> bool:
     if not settings.TURNSTILE_SECRET_KEY:
         return True  # captcha disabled (dev) — skip verification
+    if not token:
+        return False
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.post(_TURNSTILE_VERIFY_URL, data={
                 "secret": settings.TURNSTILE_SECRET_KEY,
                 "response": token,
-                "remoteip": remoteip,
             })
-        return resp.json().get("success", False)
+        # NOTE: we intentionally do NOT send `remoteip`. Cloudflare ties the
+        # token to the IP that solved the challenge, and iOS clients (iCloud
+        # Private Relay / rotating cellular IPv6) frequently egress from a
+        # different IP by verification time, which made valid tokens fail.
+        result = resp.json()
+        if not result.get("success", False):
+            _log.warning("turnstile verification failed: %s", result.get("error-codes"))
+        return result.get("success", False)
     except Exception:
+        _log.exception("turnstile verification request errored")
         return False

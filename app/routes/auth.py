@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from app.config import settings
-from app.deps import get_client_ip, get_current_user, get_db
+from app.deps import get_current_user, get_db
 from app.i18n import TRANSLATIONS, detect_language, get_translator
 from app.models import User
 from app.auth import hash_password, verify_password, create_access_token, verify_turnstile, COOKIE_NAME
@@ -48,7 +48,7 @@ async def signup(
     lang = detect_language(request)
     _ = get_translator(lang)
 
-    if not await verify_turnstile(cf_turnstile_response, get_client_ip(request)):
+    if not await verify_turnstile(cf_turnstile_response):
         return templates.TemplateResponse(
             request, "auth/signup.html",
             _ctx(request, error=_("error_captcha_failed"), site_key=settings.TURNSTILE_SITE_KEY),
@@ -114,7 +114,7 @@ async def login(
     cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     db: AsyncSession = Depends(get_db),
 ):
-    if not await verify_turnstile(cf_turnstile_response, get_client_ip(request)):
+    if not await verify_turnstile(cf_turnstile_response):
         lang = detect_language(request)
         _ = get_translator(lang)
         return templates.TemplateResponse(
